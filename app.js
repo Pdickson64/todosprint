@@ -1,6 +1,6 @@
 // Sprint Todo App - Main Application JavaScript
 // Updated: 2025-08-14 14:31 - Fixed subtask display duplication issue
-
+// forcing update to github
 class SprintTodoApp {
     constructor() {
         this.tasks = [];
