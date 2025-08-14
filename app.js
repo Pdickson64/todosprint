@@ -1547,6 +1547,9 @@ class SprintTodoApp {
             existingFolderGroup.remove();
         }
         
+        // Store the task ID in a data attribute for editing
+        form.dataset.taskId = taskData.id || '';
+        
         // Set task data if editing
         if (taskData.id) {
             document.getElementById('modal-title').textContent = 'Edit Task';
@@ -1693,15 +1696,23 @@ class SprintTodoApp {
             taskData.folderId = folderSelect.value || null;
         }
         
-        // Create or update task
-        this.createTask(taskData);
+        // Get the task ID from the form data attribute
+        const form = document.getElementById('task-form');
+        const taskId = form.dataset.taskId;
+        
+        if (taskId) {
+            // Update existing task
+            this.updateTask(taskId, taskData);
+            this.showNotification('Task updated successfully!');
+        } else {
+            // Create new task
+            this.createTask(taskData);
+            this.showNotification('Task created successfully!');
+        }
         
         // Close modal and refresh UI
         this.closeModals();
         this.render();
-        
-        // Show success message
-        this.showNotification('Task saved successfully!');
     }
 
     saveSprint() {
