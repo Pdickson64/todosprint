@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprint Todo App</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <i class="fas fa-tasks"></i>
+                <h1>Sprint Todo</h1>
+            </div>
+            <nav class="main-nav">
+                <button class="nav-btn active" data-view="backlog">
+                    <i class="fas fa-list"></i> Backlog
+                </button>
+                <button class="nav-btn" data-view="sprints">
+                    <i class="fas fa-calendar-alt"></i> Sprints
+                </button>
+                <button class="nav-btn" data-view="board">
+                    <i class="fas fa-columns"></i> Sprint Board
+                </button>
+                <button class="nav-btn" data-view="analysis">
+                    <i class="fas fa-chart-line"></i> Analysis
+                </button>
+            </nav>
+            <div class="user-actions">
+                <button id="add-task-btn" class="btn-primary">
+                    <i class="fas fa-plus"></i> Add Task
+                </button>
+                <button id="email-task-btn" class="btn-secondary">
+                    <i class="fas fa-envelope"></i> From Email
+                </button>
+                <button id="settings-btn" class="btn-secondary">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Backlog View -->
+            <div id="backlog-view" class="view active">
+                <div class="backlog-header">
+                    <h2>Product Backlog</h2>
+                    <div class="backlog-actions">
+                        <button id="create-folder-btn" class="btn-secondary">
+                            <i class="fas fa-folder-plus"></i> Create Folder
+                        </button>
+                        <button id="add-to-backlog-btn" class="btn-secondary">
+                            <i class="fas fa-plus"></i> Add to Backlog
+                        </button>
+                    </div>
+                </div>
+                <div class="backlog-container" id="backlog-container">
+                    <!-- Backlog folders and tasks will be dynamically added here -->
+                </div>
+            </div>
+
+            <!-- Sprints View -->
+            <div id="sprints-view" class="view">
+                <div class="sprints-header">
+                    <h2>Sprint Management</h2>
+                    <button id="create-sprint-btn" class="btn-primary">
+                        <i class="fas fa-plus"></i> Create Sprint
+                    </button>
+                </div>
+                <div class="sprints-container" id="sprints-container">
+                    <!-- Sprint list will be dynamically added here -->
+                </div>
+            </div>
+
+            <!-- Sprint Board View -->
+            <div id="board-view" class="view">
+                <div class="board-header">
+                    <h2>Sprint Board</h2>
+                    <div class="board-controls">
+                        <select id="sprint-selector" class="sprint-select">
+                            <option value="">Select Sprint</option>
+                        </select>
+                        <button id="add-task-to-sprint-btn" class="btn-secondary">
+                            <i class="fas fa-plus"></i> Add Task
+                        </button>
+                        <button id="manage-statuses-btn" class="btn-secondary">
+                            <i class="fas fa-cog"></i> Manage Statuses
+                        </button>
+                    </div>
+                </div>
+                <div class="board-container" id="board-container">
+                    <!-- Sprint board columns will be dynamically added here -->
+                </div>
+            </div>
+
+            <!-- Analysis View -->
+            <div id="analysis-view" class="view">
+                <div class="analysis-header">
+                    <h2>Sprint Analysis</h2>
+                    <div class="analysis-controls">
+                        <select id="analysis-sprint-selector" class="sprint-select">
+                            <option value="">Select Sprint</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="charts-container">
+                    <div class="chart">
+                        <h3>Burn Up Chart</h3>
+                        <canvas id="burnup-chart"></canvas>
+                    </div>
+                    <div class="chart">
+                        <h3>Burn Down Chart</h3>
+                        <canvas id="burndown-chart"></canvas>
+                    </div>
+                    <div class="chart">
+                        <h3>Velocity Chart</h3>
+                        <canvas id="velocity-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Task Modal -->
+        <div id="task-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modal-title">Create Task</h3>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <form id="task-form">
+                    <div class="form-group">
+                        <label for="task-title">Title</label>
+                        <input type="text" id="task-title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="task-description">Description</label>
+                        <textarea id="task-description"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="task-points">Story Points</label>
+                            <input type="number" id="task-points" min="1" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="task-priority">Priority</label>
+                            <select id="task-priority">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="task-due-date">Due Date</label>
+                            <input type="date" id="task-due-date">
+                        </div>
+                        <div class="form-group">
+                            <label for="task-sprint">Sprint</label>
+                            <select id="task-sprint">
+                                <option value="">No Sprint</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="task-recurring"> Recurring Task
+                        </label>
+                    </div>
+                    <div id="recurring-options" class="form-group" style="display: none;">
+                        <label for="recurring-type">Recurring Type</label>
+                        <select id="recurring-type">
+                            <option value="completion">On Completion</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="biweekly">Bi-weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="yearly">Yearly</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Save Task</button>
+                        <button type="button" class="btn-secondary cancel-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Email Integration Modal -->
+        <div id="email-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Create Task from Email</h3>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <form id="email-form">
+                    <div class="form-group">
+                        <label for="email-subject">Email Subject</label>
+                        <input type="text" id="email-subject" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email-content">Email Content</label>
+                        <textarea id="email-content" rows="8" required></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="email-task-points">Story Points</label>
+                            <input type="number" id="email-task-points" min="1" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="email-task-priority">Priority</label>
+                            <select id="email-task-priority">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="email-task-due-date">Due Date</label>
+                            <input type="date" id="email-task-due-date">
+                        </div>
+                        <div class="form-group">
+                            <label for="email-task-sprint">Sprint</label>
+                            <select id="email-task-sprint">
+                                <option value="">No Sprint</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Create Task</button>
+                        <button type="button" class="btn-secondary cancel-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sprint Modal -->
+        <div id="sprint-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="sprint-modal-title">Create Sprint</h3>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <form id="sprint-form">
+                    <div class="form-group">
+                        <label for="sprint-name">Sprint Name</label>
+                        <input type="text" id="sprint-name" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="sprint-start-date">Start Date</label>
+                            <input type="date" id="sprint-start-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="sprint-end-date">End Date</label>
+                            <input type="date" id="sprint-end-date" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="sprint-duration">Duration</label>
+                        <select id="sprint-duration">
+                            <option value="1">1 Week</option>
+                            <option value="2">2 Weeks</option>
+                            <option value="4">4 Weeks</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Create Sprint</button>
+                        <button type="button" class="btn-secondary cancel-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Board Status Management Modal -->
+        <div id="status-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="status-modal-title">Manage Board Statuses</h3>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="status-controls">
+                        <button id="add-status-btn" class="btn-primary">
+                            <i class="fas fa-plus"></i> Add Status
+                        </button>
+                        <button id="reset-statuses-btn" class="btn-secondary">
+                            <i class="fas fa-undo"></i> Reset to Default
+                        </button>
+                    </div>
+                    <div id="status-list" class="status-list">
+                        <!-- Status items will be dynamically added here -->
+                    </div>
+                    <div id="add-status-form" class="add-status-form">
+                        <input type="text" id="new-status-name" placeholder="Enter status name">
+                        <input type="number" id="new-status-order" placeholder="Order" min="1" value="">
+                        <div class="add-status-actions">
+                            <button type="button" class="add-status-save-btn" onclick="app.addStatus()">
+                                <i class="fas fa-check"></i> Add
+                            </button>
+                            <button type="button" class="add-status-cancel-btn" onclick="app.hideAddStatusForm()">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <script src="app.js?v=20250814-5"></script>
+
+    <!-- Context Menu -->
+    <div id="context-menu" class="context-menu">
+        <div class="context-menu-item" onclick="app.assignToSprint()">
+            <i class="fas fa-calendar-plus"></i>
+            <span>Assign to Sprint</span>
+        </div>
+        <div class="context-menu-item" onclick="app.editTaskFromMenu()">
+            <i class="fas fa-edit"></i>
+            <span>Edit Task</span>
+        </div>
+        <div class="context-menu-item" onclick="app.deleteTaskFromMenu()">
+            <i class="fas fa-trash"></i>
+            <span>Delete Task</span>
+        </div>
+    </div>
+
+    <!-- Inline Task Creation Form -->
+    <div id="inline-task-form" class="inline-task-form" style="display: none;">
+        <div class="inline-form-content">
+            <div class="inline-form-header">
+                <h4>Create Task</h4>
+                <button class="close-inline-form" onclick="app.closeInlineTaskForm()">&times;</button>
+            </div>
+            <form id="inline-task-form-element">
+                <div class="form-group">
+                    <input type="text" id="inline-task-title" placeholder="Task title" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <input type="number" id="inline-task-points" placeholder="Points" min="1" value="1">
+                    </div>
+                    <div class="form-group">
+                        <select id="inline-task-priority">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <input type="date" id="inline-task-due-date">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Create Task</button>
+                    <button type="button" class="btn-secondary cancel-btn" onclick="app.closeInlineTaskForm()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
