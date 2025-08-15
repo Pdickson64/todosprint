@@ -1,11 +1,14 @@
 // Sprint Todo App - Main Application JavaScript
 // Updated: 2025-08-14 14:31 - Fixed subtask display duplication issue
 // forcing update to github
-class SprintTodoApp {
-    constructor() {
+function SprintTodoApp() {
+    if (!(this instanceof SprintTodoApp)) {
+        return new SprintTodoApp();
+    }
         this.tasks = [];
         this.sprints = [];
         this.folders = [];
+        this.folderStates = {}; // { [folderId]: true|false }  true = collapsed
         this.currentView = 'backlog';
         this.currentSprint = null;
         this.draggedElement = null;
@@ -18,12 +21,14 @@ class SprintTodoApp {
         
         // Board statuses
         this.boardStatuses = [];
+        this.folderStates = {}; // { [folderId]: true (collapsed) | false (expanded) }
+
         
         // Initialize the app
         this.init();
     }
 
-    init() {
+    SprintTodoApp.prototype.init = function() {
         // Load data from localStorage
         this.loadData();
         
@@ -52,7 +57,7 @@ class SprintTodoApp {
     }
 
     // Event Delegation
-    setupEventDelegation() {
+    SprintTodoApp.prototype.setupEventDelegation = function() {
         // Handle toggle subtasks button clicks
         document.addEventListener('click', (e) => {
             const toggleBtn = e.target.closest('.btn-toggle-subtasks');
@@ -74,11 +79,13 @@ class SprintTodoApp {
     }
 
     // Data Management
-    loadData() {
+    SprintTodoApp.prototype.loadData = function() {
         const savedTasks = localStorage.getItem('sprint-todo-tasks');
         const savedSprints = localStorage.getItem('sprint-todo-sprints');
         const savedFolders = localStorage.getItem('sprint-todo-folders');
         const savedBoardStatuses = localStorage.getItem('sprint-todo-board-statuses');
+        const savedFolderStates = localStorage.getItem('sprint-todo-folder-states');
+        this.folderStates = savedFolderStates ? JSON.parse(savedFolderStates) : {};
         
         if (savedTasks) {
             this.tasks = JSON.parse(savedTasks);
@@ -100,15 +107,17 @@ class SprintTodoApp {
         }
     }
 
-    saveData() {
+    SprintTodoApp.prototype.saveData = function() {
         localStorage.setItem('sprint-todo-tasks', JSON.stringify(this.tasks));
         localStorage.setItem('sprint-todo-sprints', JSON.stringify(this.sprints));
         localStorage.setItem('sprint-todo-folders', JSON.stringify(this.folders));
         localStorage.setItem('sprint-todo-board-statuses', JSON.stringify(this.boardStatuses));
+        localStorage.setItem('sprint-todo-folder-states', JSON.stringify(this.folderStates));
+        
     }
 
     // Task Management
-    createTask(taskData) {
+    SprintTodoApp.prototype.createTask = function(taskData) {
         const task = {
             id: Date.now().toString(),
             title: taskData.title,
@@ -132,7 +141,7 @@ class SprintTodoApp {
         return task;
     }
 
-    createSubtask(parentTaskId, subtaskData) {
+    SprintTodoApp.prototype.createSubtask = function(parentTaskId, subtaskData) {
         const parentTask = this.getTask(parentTaskId);
         if (!parentTask) return null;
         
@@ -174,7 +183,7 @@ class SprintTodoApp {
         return subtask;
     }
 
-    updateSubtask(parentTaskId, subtaskId, updates) {
+    SprintTodoApp.prototype.updateSubtask = function(parentTaskId, subtaskId, updates) {
         // Find the subtask in the main tasks array
         const subtask = this.getTask(subtaskId);
         if (!subtask) return null;
@@ -198,7 +207,7 @@ class SprintTodoApp {
         return subtask;
     }
 
-    deleteSubtask(parentTaskId, subtaskId) {
+    SprintTodoApp.prototype.deleteSubtask = function(parentTaskId, subtaskId) {
         // Remove from main tasks array
         this.tasks = this.tasks.filter(t => t.id !== subtaskId);
         
@@ -213,7 +222,7 @@ class SprintTodoApp {
         return true;
     }
 
-    toggleSubtaskComplete(parentTaskId, subtaskId) {
+    SprintTodoApp.prototype.toggleSubtaskComplete = function(parentTaskId, subtaskId) {
         const subtask = this.getSubtask(parentTaskId, subtaskId);
         if (subtask) {
             this.updateSubtask(parentTaskId, subtaskId, { completed: !subtask.completed });
@@ -222,12 +231,13 @@ class SprintTodoApp {
         return false;
     }
 
-    getSubtask(parentTaskId, subtaskId) {
+    SprintTodoApp.prototype.getSubtask = function(parentTaskId, subtaskId) {
         // Find the subtask in the main tasks array
         return this.getTask(subtaskId);
     }
 
-    getAllSubtasks(parentTaskId, includeNested = true) {
+    SprintTodoApp.prototype.getAllSubtasks = function(parentTaskId, includeNested) {
+        includeNested = includeNested !== false;
         const parentTask = this.getTask(parentTaskId);
         if (!parentTask) return [];
         
@@ -253,7 +263,7 @@ class SprintTodoApp {
     }
 
     // Add method to get all tasks (including subtasks) for a sprint
-    getTasksAndSubtasksBySprint(sprintId) {
+    SprintTodoApp.prototype.getTasksAndSubtasksBySprint = function(sprintId) {
         const mainTasks = this.getTasksBySprint(sprintId);
         const allTasks = [...mainTasks];
         
@@ -267,7 +277,7 @@ class SprintTodoApp {
     }
     
     // Add method to get all tasks as flat list for sprint boards (no subtask nesting)
-    getFlatTasksForSprintBoard(sprintId) {
+    SprintTodoApp.prototype.getFlatTasksForSprintBoard = function(sprintId) {
         const mainTasks = this.getTasksBySprint(sprintId);
         const allTasks = [];
         
@@ -297,7 +307,7 @@ class SprintTodoApp {
     }
 
     // Add method to get parent tasks for a folder (subtasks will be handled by createTaskElement)
-    getTasksAndSubtasksByFolder(folderId) {
+    SprintTodoApp.prototype.getTasksAndSubtasksByFolder = function(folderId) {
         // Get all tasks for the folder
         const folderTasks = this.getTasksByFolder(folderId);
         
@@ -308,7 +318,7 @@ class SprintTodoApp {
     }
     
     // Add method to get only parent tasks for a folder (no subtask handling)
-    getParentTasksForFolder(folderId) {
+    SprintTodoApp.prototype.getParentTasksForFolder = function(folderId) {
         // Get all tasks for the folder
         const folderTasks = this.getTasksByFolder(folderId);
         
@@ -319,7 +329,7 @@ class SprintTodoApp {
     }
     
 
-    updateTask(taskId, updates) {
+    SprintTodoApp.prototype.updateTask = function(taskId, updates) {
         const taskIndex = this.tasks.findIndex(t => t.id === taskId);
         if (taskIndex !== -1) {
             this.tasks[taskIndex] = {
@@ -342,25 +352,25 @@ class SprintTodoApp {
         return null;
     }
 
-    deleteTask(taskId) {
+    SprintTodoApp.prototype.deleteTask = function(taskId) {
         this.tasks = this.tasks.filter(t => t.id !== taskId);
         this.saveData();
     }
 
-    getTask(taskId) {
+    SprintTodoApp.prototype.getTask = function(taskId) {
         return this.tasks.find(t => t.id === taskId);
     }
 
-    getTasksByFolder(folderId) {
+    SprintTodoApp.prototype.getTasksByFolder = function(folderId) {
         return this.tasks.filter(t => t.folderId === folderId);
     }
 
-    getTasksBySprint(sprintId) {
+    SprintTodoApp.prototype.getTasksBySprint = function(sprintId) {
         return this.tasks.filter(t => t.sprintId === sprintId);
     }
 
     // Sprint Management
-    createSprint(sprintData) {
+    SprintTodoApp.prototype.createSprint = function(sprintData) {
         const sprint = {
             id: Date.now().toString(),
             name: sprintData.name,
@@ -377,7 +387,7 @@ class SprintTodoApp {
         return sprint;
     }
 
-    updateSprint(sprintId, updates) {
+    SprintTodoApp.prototype.updateSprint = function(sprintId, updates) {
         const sprintIndex = this.sprints.findIndex(s => s.id === sprintId);
         if (sprintIndex !== -1) {
             this.sprints[sprintIndex] = {
@@ -391,7 +401,7 @@ class SprintTodoApp {
         return null;
     }
 
-    deleteSprint(sprintId) {
+    SprintTodoApp.prototype.deleteSprint = function(sprintId) {
         // Move tasks from this sprint to backlog
         this.tasks.forEach(task => {
             if (task.sprintId === sprintId) {
@@ -404,16 +414,16 @@ class SprintTodoApp {
         this.saveData();
     }
 
-    getSprint(sprintId) {
+    SprintTodoApp.prototype.getSprint = function(sprintId) {
         return this.sprints.find(s => s.id === sprintId);
     }
 
-    getCurrentSprint() {
+    SprintTodoApp.prototype.getCurrentSprint = function() {
         return this.sprints.find(s => s.status === 'active');
     }
 
     // Folder Management
-    createFolder(folderData) {
+    SprintTodoApp.prototype.createFolder = function(folderData) {
         const folder = {
             id: Date.now().toString(),
             name: folderData.name,
@@ -423,11 +433,13 @@ class SprintTodoApp {
         };
         
         this.folders.push(folder);
+         // NEW: default to expanded
+        this.folderStates[folder.id] = false;
         this.saveData();
         return folder;
     }
 
-    updateFolder(folderId, updates) {
+    SprintTodoApp.prototype.updateFolder = function(folderId, updates) {
         const folderIndex = this.folders.findIndex(f => f.id === folderId);
         if (folderIndex !== -1) {
             this.folders[folderIndex] = {
@@ -441,7 +453,7 @@ class SprintTodoApp {
         return null;
     }
 
-    deleteFolder(folderId) {
+    SprintTodoApp.prototype.deleteFolder = function(folderId) {
         // Move tasks from this folder to backlog
         this.tasks.forEach(task => {
             if (task.folderId === folderId) {
@@ -451,14 +463,17 @@ class SprintTodoApp {
         
         this.folders = this.folders.filter(f => f.id !== folderId);
         this.saveData();
+
+        // NEW: forget its persisted collapsed state
+        delete this.folderStates[folderId];
     }
 
-    getFolder(folderId) {
+    SprintTodoApp.prototype.getFolder = function(folderId) {
         return this.folders.find(f => f.id === folderId);
     }
 
     // Recurring Tasks
-    handleRecurringTask(task) {
+    SprintTodoApp.prototype.handleRecurringTask = function(task) {
         if (!task.recurring || !task.recurringType) return;
         
         let newDueDate = null;
@@ -525,7 +540,7 @@ class SprintTodoApp {
     }
 
     // Sprint Board Status Management
-    getDefaultBoardStatuses() {
+    SprintTodoApp.prototype.getDefaultBoardStatuses = function() {
         return [
             { id: 'todo', name: 'To Do', order: 1 },
             { id: 'inprogress', name: 'In Progress', order: 2 },
@@ -534,12 +549,12 @@ class SprintTodoApp {
         ];
     }
 
-    getBoardStatuses() {
+    SprintTodoApp.prototype.getBoardStatuses = function() {
         // Return custom statuses if they exist, otherwise return defaults
         return this.boardStatuses.length > 0 ? this.boardStatuses : this.getDefaultBoardStatuses();
     }
 
-    addBoardStatus(statusData) {
+    SprintTodoApp.prototype.addBoardStatus = function(statusData) {
         const status = {
             id: statusData.id || Date.now().toString(),
             name: statusData.name,
@@ -552,7 +567,7 @@ class SprintTodoApp {
         return status;
     }
 
-    updateBoardStatus(statusId, updates) {
+    SprintTodoApp.prototype.updateBoardStatus = function(statusId, updates) {
         const statusIndex = this.boardStatuses.findIndex(s => s.id === statusId);
         if (statusIndex !== -1) {
             this.boardStatuses[statusIndex] = {
@@ -566,7 +581,7 @@ class SprintTodoApp {
         return null;
     }
 
-    deleteBoardStatus(statusId) {
+    SprintTodoApp.prototype.deleteBoardStatus = function(statusId) {
         // Check if any tasks are using this status
         const tasksWithStatus = this.tasks.filter(task => task.status === statusId);
         if (tasksWithStatus.length > 0) {
@@ -579,7 +594,7 @@ class SprintTodoApp {
         return true;
     }
 
-    resetBoardStatuses() {
+    SprintTodoApp.prototype.resetBoardStatuses = function() {
         this.boardStatuses = [];
         this.saveData();
         this.renderSprintBoard();
@@ -587,19 +602,19 @@ class SprintTodoApp {
     }
 
     // Status Management Modal Methods
-    openStatusModal() {
+    SprintTodoApp.prototype.openStatusModal = function() {
         const modal = document.getElementById('status-modal');
         modal.classList.add('active');
         this.renderStatusList();
     }
 
-    closeStatusModal() {
+    SprintTodoApp.prototype.closeStatusModal = function() {
         const modal = document.getElementById('status-modal');
         modal.classList.remove('active');
         this.hideAddStatusForm();
     }
 
-    renderStatusList() {
+    SprintTodoApp.prototype.renderStatusList = function() {
         const statusList = document.getElementById('status-list');
         const statuses = this.getBoardStatuses();
         
@@ -632,7 +647,7 @@ class SprintTodoApp {
         });
     }
 
-    showAddStatusForm() {
+    SprintTodoApp.prototype.showAddStatusForm = function() {
         const form = document.getElementById('add-status-form');
         if (form) {
             form.classList.add('active');
@@ -640,7 +655,7 @@ class SprintTodoApp {
         }
     }
 
-    hideAddStatusForm() {
+    SprintTodoApp.prototype.hideAddStatusForm = function() {
         const form = document.getElementById('add-status-form');
         if (form) {
             form.classList.remove('active');
@@ -649,7 +664,7 @@ class SprintTodoApp {
         }
     }
 
-    addStatus() {
+    SprintTodoApp.prototype.addStatus = function() {
         const name = document.getElementById('new-status-name').value.trim();
         const order = parseInt(document.getElementById('new-status-order').value) || this.getBoardStatuses().length + 1;
         
@@ -668,7 +683,7 @@ class SprintTodoApp {
         this.showNotification('Status added successfully!');
     }
 
-    editStatus(statusId) {
+    SprintTodoApp.prototype.editStatus = function(statusId) {
         const status = this.boardStatuses.find(s => s.id === statusId);
         if (!status) return;
         
@@ -691,7 +706,7 @@ class SprintTodoApp {
         document.getElementById('edit-status-name').focus();
     }
 
-    saveStatus(statusId) {
+    SprintTodoApp.prototype.saveStatus = function(statusId) {
         const name = document.getElementById('edit-status-name').value.trim();
         const order = parseInt(document.getElementById('edit-status-order').value) || 1;
         
@@ -706,7 +721,7 @@ class SprintTodoApp {
         this.showNotification('Status updated successfully!');
     }
 
-    deleteStatus(statusId) {
+    SprintTodoApp.prototype.deleteStatus = function(statusId) {
         const status = this.boardStatuses.find(s => s.id === statusId);
         if (!status) return;
         
@@ -719,7 +734,7 @@ class SprintTodoApp {
         }
     }
 
-    moveStatusUp(statusId) {
+    SprintTodoApp.prototype.moveStatusUp = function(statusId) {
         const statuses = this.getBoardStatuses();
         const statusIndex = statuses.findIndex(s => s.id === statusId);
         
@@ -735,7 +750,7 @@ class SprintTodoApp {
         }
     }
 
-    moveStatusDown(statusId) {
+    SprintTodoApp.prototype.moveStatusDown = function(statusId) {
         const statuses = this.getBoardStatuses();
         const statusIndex = statuses.findIndex(s => s.id === statusId);
         
@@ -752,120 +767,176 @@ class SprintTodoApp {
     }
 
     // Event Listeners Setup
-    setupEventListeners() {
+    SprintTodoApp.prototype.setupEventListeners = function() {
         // Navigation
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const view = e.currentTarget.dataset.view;
-                this.switchView(view);
+        const navButtons = document.querySelectorAll('.nav-btn');
+        if (navButtons) {
+            navButtons.forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const view = e.currentTarget.dataset.view;
+                    this.switchView(view);
+                });
             });
-        });
+        }
         
         // Task Modal
-        document.getElementById('add-task-btn').addEventListener('click', () => {
-            this.openTaskModal();
-        });
+        const addTaskBtn = document.getElementById('add-task-btn');
+        if (addTaskBtn) {
+            addTaskBtn.addEventListener('click', () => {
+                this.openTaskModal();
+            });
+        }
         
-        document.getElementById('add-to-backlog-btn').addEventListener('click', () => {
-            this.openTaskModal({ folderId: null });
-        });
+        const addToBacklogBtn = document.getElementById('add-to-backlog-btn');
+        if (addToBacklogBtn) {
+            addToBacklogBtn.addEventListener('click', () => {
+                this.openTaskModal({ folderId: null });
+            });
+        }
         
-        document.getElementById('task-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.saveTask();
-        });
+        const taskForm = document.getElementById('task-form');
+        if (taskForm) {
+            taskForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.saveTask();
+            });
+        }
         
         // Recurring task checkbox
-        document.getElementById('task-recurring').addEventListener('change', (e) => {
-            const recurringOptions = document.getElementById('recurring-options');
-            recurringOptions.style.display = e.target.checked ? 'block' : 'none';
-        });
-        
-        // Sprint Modal
-        document.getElementById('create-sprint-btn').addEventListener('click', () => {
-            this.openSprintModal();
-        });
-        
-        document.getElementById('sprint-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.saveSprint();
-        });
-        
-        // Email Integration
-        document.getElementById('email-task-btn').addEventListener('click', () => {
-            this.openEmailModal();
-        });
-        
-        document.getElementById('email-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.createTaskFromEmail();
-        });
-        
-        // Sprint selector
-        document.getElementById('sprint-selector').addEventListener('change', (e) => {
-            const sprintId = e.target.value;
-            this.currentSprint = sprintId ? this.getSprint(sprintId) : null;
-            this.renderSprintBoard();
-        });
-        
-        document.getElementById('analysis-sprint-selector').addEventListener('change', (e) => {
-            const sprintId = e.target.value;
-            this.renderCharts(sprintId);
-        });
-        
-        // Modal close buttons
-        document.querySelectorAll('.close-btn, .cancel-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                this.closeModals();
-            });
-        });
-        
-        // Click outside modal to close
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    this.closeModals();
+        const taskRecurring = document.getElementById('task-recurring');
+        if (taskRecurring) {
+            taskRecurring.addEventListener('change', (e) => {
+                const recurringOptions = document.getElementById('recurring-options');
+                if (recurringOptions) {
+                    recurringOptions.style.display = e.target.checked ? 'block' : 'none';
                 }
             });
-        });
+        }
+        
+        // Sprint Modal
+        const createSprintBtn = document.getElementById('create-sprint-btn');
+        if (createSprintBtn) {
+            createSprintBtn.addEventListener('click', () => {
+                this.openSprintModal();
+            });
+        }
+        
+        const sprintForm = document.getElementById('sprint-form');
+        if (sprintForm) {
+            sprintForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.saveSprint();
+            });
+        }
+        
+        // Email Integration
+        const emailTaskBtn = document.getElementById('email-task-btn');
+        if (emailTaskBtn) {
+            emailTaskBtn.addEventListener('click', () => {
+                this.openEmailModal();
+            });
+        }
+        
+        const emailForm = document.getElementById('email-form');
+        if (emailForm) {
+            emailForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.createTaskFromEmail();
+            });
+        }
+        
+        // Sprint selector
+        const sprintSelector = document.getElementById('sprint-selector');
+        if (sprintSelector) {
+            sprintSelector.addEventListener('change', (e) => {
+                const sprintId = e.target.value;
+                this.currentSprint = sprintId ? this.getSprint(sprintId) : null;
+                this.renderSprintBoard();
+            });
+        }
+        
+        const analysisSprintSelector = document.getElementById('analysis-sprint-selector');
+        if (analysisSprintSelector) {
+            analysisSprintSelector.addEventListener('change', (e) => {
+                const sprintId = e.target.value;
+                this.renderCharts(sprintId);
+            });
+        }
+        
+        // Modal close buttons
+        const closeButtons = document.querySelectorAll('.close-btn, .cancel-btn');
+        if (closeButtons) {
+            closeButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    this.closeModals();
+                });
+            });
+        }
+        
+        // Click outside modal to close
+        const modals = document.querySelectorAll('.modal');
+        if (modals) {
+            modals.forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        this.closeModals();
+                    }
+                });
+            });
+        }
         
         // Create folder button
-        document.getElementById('create-folder-btn').addEventListener('click', () => {
-            this.showCreateFolderDialog();
-        });
+        const createFolderBtn = document.getElementById('create-folder-btn');
+        if (createFolderBtn) {
+            createFolderBtn.addEventListener('click', () => {
+                this.showCreateFolderDialog();
+            });
+        }
         
         // Inline task form
-        document.getElementById('inline-task-form-element').addEventListener('submit', (e) => {
-            e.preventDefault();
-            this.saveInlineTask();
-        });
+        const inlineTaskForm = document.getElementById('inline-task-form-element');
+        if (inlineTaskForm) {
+            inlineTaskForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.saveInlineTask();
+            });
+        }
         
         // Status Management Modal
-        document.getElementById('manage-statuses-btn').addEventListener('click', () => {
-            this.openStatusModal();
-        });
+        const manageStatusesBtn = document.getElementById('manage-statuses-btn');
+        if (manageStatusesBtn) {
+            manageStatusesBtn.addEventListener('click', () => {
+                this.openStatusModal();
+            });
+        }
         
-        document.getElementById('add-status-btn').addEventListener('click', () => {
-            this.showAddStatusForm();
-        });
+        const addStatusBtn = document.getElementById('add-status-btn');
+        if (addStatusBtn) {
+            addStatusBtn.addEventListener('click', () => {
+                this.showAddStatusForm();
+            });
+        }
         
-        document.getElementById('reset-statuses-btn').addEventListener('click', () => {
-            if (confirm('Are you sure you want to reset board statuses to default? This will remove all custom statuses.')) {
-                this.resetBoardStatuses();
-                this.closeStatusModal();
-            }
-        });
+        const resetStatusesBtn = document.getElementById('reset-statuses-btn');
+        if (resetStatusesBtn) {
+            resetStatusesBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to reset board statuses to default? This will remove all custom statuses.')) {
+                    this.resetBoardStatuses();
+                    this.closeStatusModal();
+                }
+            });
+        }
     }
 
     // UI Rendering
-    render() {
+    SprintTodoApp.prototype.render = function() {
         this.renderBacklog();
         this.renderSprints();
         this.renderSprintSelectors();
         this.updateSprintStatuses();
     }
 
-    switchView(viewName) {
+    SprintTodoApp.prototype.switchView = function(viewName) {
         // Clean up charts if switching away from analysis
         if (this.currentView === 'analysis' && viewName !== 'analysis') {
             this.destroyCharts();
@@ -905,7 +976,7 @@ class SprintTodoApp {
         }
     }
     
-    destroyCharts() {
+    SprintTodoApp.prototype.destroyCharts = function() {
         if (this.burnupChart) {
             this.burnupChart.destroy();
             this.burnupChart = null;
@@ -920,19 +991,29 @@ class SprintTodoApp {
         }
     }
 
-    renderBacklog() {
+    SprintTodoApp.prototype.renderBacklog = function() {
         const container = document.getElementById('backlog-container');
+        if (!container) return;
+        
         container.innerHTML = '';
+        
+        // Get unfiled tasks first
+        const unfiledTasks = this.tasks.filter(task => !task.folderId);
         
         // Render folders
         this.folders.forEach(folder => {
-            const folderElement = this.createFolderElement(folder);
+            const folderElement = SprintTodoApp.prototype.createFolderElement.call(this, folder);
+
+            // APPLY PERSISTED STATE BEFORE APPEND
+            if (this.folderStates[folder.id]) {
+                folderElement.classList.add('collapsed'); // true means collapsed
+            }
+
             container.appendChild(folderElement);
         });
-        
-        // Render tasks not in folders (flat view) - filter out subtasks and completed tasks
-        const unfiledTasks = this.tasks.filter(t => !t.folderId && !t.parentTaskId && t.status !== 'done');
-        if (unfiledTasks.length > 0) {
+
+        // Apply persisted collapsed state for 'unfiled'
+        if (unfiledTasks && unfiledTasks.length > 0) {
             const unfiledContainer = document.createElement('div');
             unfiledContainer.className = 'folder';
             unfiledContainer.dataset.folderId = 'unfiled';
@@ -953,8 +1034,16 @@ class SprintTodoApp {
                     </div>
                 </div>
             `;
+            
+            // Apply persisted state to unfiled
+            if (this.folderStates['unfiled']) {
+                unfiledContainer.classList.add('collapsed');
+                const icon = unfiledContainer.querySelector('.folder-toggle');
+                if (icon) icon.className = 'fas fa-chevron-right folder-toggle';
+            }
             container.appendChild(unfiledContainer);
         }
+        
         
         // Show empty state if no incomplete tasks
         const incompleteTasks = this.tasks.filter(t => !t.parentTaskId && t.status !== 'done');
@@ -969,7 +1058,7 @@ class SprintTodoApp {
         }
     }
 
-    createFolderElement(folder) {
+    SprintTodoApp.prototype.createFolderElement = function(folder) {
         const tasks = this.getParentTasksForFolder(folder.id).filter(task => task.status !== 'done');
         const folderElement = document.createElement('div');
         folderElement.className = 'folder';
@@ -1000,10 +1089,20 @@ class SprintTodoApp {
                 </div>
             </div>
         `;
+        // Apply persisted collapsed state
+        const isCollapsed = !!this.folderStates[folder.id];
+        if (isCollapsed) {
+            folderElement.classList.add('collapsed');
+            const icon = folderElement.querySelector('.folder-toggle');
+            if (icon) icon.className = 'fas fa-chevron-right folder-toggle';
+        }
         return folderElement;
-    }
+    };
 
-    createTaskElement(task, isSubtask = false, parentTaskId = null, level = 0) {
+    SprintTodoApp.prototype.createTaskElement = function(task, isSubtask, parentTaskId, level) {
+        isSubtask = isSubtask || false;
+        parentTaskId = parentTaskId || null;
+        level = level || 0;
         const priorityClass = `priority-${task.priority}`;
         const dueDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '';
         const indentClass = isSubtask ? 'subtask' : '';
@@ -1122,7 +1221,7 @@ class SprintTodoApp {
         `;
     }
 
-    renderSprints() {
+    SprintTodoApp.prototype.renderSprints = function() {
         const container = document.getElementById('sprints-container');
         container.innerHTML = '';
         
@@ -1143,7 +1242,7 @@ class SprintTodoApp {
         }
     }
 
-    createSprintElement(sprint) {
+    SprintTodoApp.prototype.createSprintElement = function(sprint) {
         const tasks = this.getFlatTasksForSprintBoard(sprint.id);
         const totalPoints = tasks.reduce((sum, task) => sum + task.points, 0);
         const completedPoints = tasks
@@ -1190,7 +1289,7 @@ class SprintTodoApp {
         return sprintElement;
     }
 
-    renderSprintBoard() {
+    SprintTodoApp.prototype.renderSprintBoard = function() {
         console.log('renderSprintBoard called');
         const container = document.getElementById('board-container');
         container.innerHTML = '';
@@ -1250,7 +1349,7 @@ class SprintTodoApp {
         });
     }
 
-    renderSprintSelectors() {
+    SprintTodoApp.prototype.renderSprintSelectors = function() {
         const selectors = [
             document.getElementById('sprint-selector'),
             document.getElementById('analysis-sprint-selector')
@@ -1269,15 +1368,15 @@ class SprintTodoApp {
         });
     }
 
-    renderAnalysis() {
+    SprintTodoApp.prototype.renderAnalysis = function() {
         // This will be implemented with charts
         const currentSprint = this.getCurrentSprint();
         if (currentSprint) {
             this.renderCharts(currentSprint.id);
-        }
+        };
     }
 
-    renderCharts(sprintId) {
+    SprintTodoApp.prototype.renderCharts = function(sprintId) {
         if (!sprintId) return;
         
         const sprint = this.getSprint(sprintId);
@@ -1301,7 +1400,7 @@ class SprintTodoApp {
         this.renderVelocityChart(sprint);
     }
     
-    generateChartData(sprint, tasks, startDate, endDate) {
+    SprintTodoApp.prototype.generateChartData = function(sprint, tasks, startDate, endDate) {
         const totalPoints = tasks.reduce((sum, task) => sum + task.points, 0);
         const completedPoints = tasks
             .filter(task => task.status === 'done')
@@ -1334,7 +1433,7 @@ class SprintTodoApp {
         return { ...chartData, totalPoints, completedPoints };
     }
     
-    renderBurnUpChart(chartData) {
+    SprintTodoApp.prototype.renderBurnUpChart = function(chartData) {
         const ctx = document.getElementById('burnup-chart');
         if (!ctx) return;
         
@@ -1391,7 +1490,7 @@ class SprintTodoApp {
         });
     }
     
-    renderBurnDownChart(chartData) {
+    SprintTodoApp.prototype.renderBurnDownChart = function(chartData) {
         const ctx = document.getElementById('burndown-chart');
         if (!ctx) return;
         
@@ -1450,7 +1549,7 @@ class SprintTodoApp {
         });
     }
     
-    renderVelocityChart(sprint) {
+    SprintTodoApp.prototype.renderVelocityChart = function(sprint) {
         const ctx = document.getElementById('velocity-chart');
         if (!ctx) return;
         
@@ -1534,7 +1633,8 @@ class SprintTodoApp {
     }
 
     // Modal Management
-    openTaskModal(taskData = {}) {
+    SprintTodoApp.prototype.openTaskModal = function(taskData) {
+        taskData = taskData || {};
         const modal = document.getElementById('task-modal');
         const form = document.getElementById('task-form');
         
@@ -1603,7 +1703,8 @@ class SprintTodoApp {
         modal.classList.add('active');
     }
 
-    openSprintModal(sprintData = {}) {
+    SprintTodoApp.prototype.openSprintModal = function(sprintData) {
+        sprintData = sprintData || {};
         const modal = document.getElementById('sprint-modal');
         const form = document.getElementById('sprint-form');
         
@@ -1627,7 +1728,7 @@ class SprintTodoApp {
         modal.classList.add('active');
     }
 
-    openEmailModal() {
+    SprintTodoApp.prototype.openEmailModal = function() {
         const modal = document.getElementById('email-modal');
         const form = document.getElementById('email-form');
         
@@ -1647,7 +1748,7 @@ class SprintTodoApp {
         modal.classList.add('active');
     }
 
-    createTaskFromEmail() {
+    SprintTodoApp.prototype.createTaskFromEmail = function() {
         const subject = document.getElementById('email-subject').value;
         const content = document.getElementById('email-content').value;
         
@@ -1671,14 +1772,14 @@ class SprintTodoApp {
         this.showNotification('Task created from email successfully!');
     }
 
-    closeModals() {
+    SprintTodoApp.prototype.closeModals = function() {
         document.querySelectorAll('.modal').forEach(modal => {
             modal.classList.remove('active');
         });
     }
 
     // Data Persistence
-    saveTask() {
+    SprintTodoApp.prototype.saveTask = function() {
         const taskData = {
             title: document.getElementById('task-title').value,
             description: document.getElementById('task-description').value,
@@ -1715,7 +1816,7 @@ class SprintTodoApp {
         this.render();
     }
 
-    saveSprint() {
+    SprintTodoApp.prototype.saveSprint = function() {
         const sprintData = {
             name: document.getElementById('sprint-name').value,
             startDate: document.getElementById('sprint-start-date').value,
@@ -1735,7 +1836,7 @@ class SprintTodoApp {
     }
 
     // Drag and Drop
-    setupDragAndDrop() {
+    SprintTodoApp.prototype.setupDragAndDrop = function() {
         document.addEventListener('dragstart', (e) => {
             if (e.target.classList.contains('task-item')) {
                 this.draggedElement = e.target;
@@ -1790,7 +1891,7 @@ class SprintTodoApp {
     }
 
     // Utility Methods
-    updateSprintStatuses() {
+    SprintTodoApp.prototype.updateSprintStatuses = function() {
         const today = new Date();
         
         this.sprints.forEach(sprint => {
@@ -1813,15 +1914,26 @@ class SprintTodoApp {
         });
     }
 
-    toggleFolder(folderId) {
-        const folderElement = document.querySelector(`[data-folder-id="${folderId}"]`) ||
-                            document.querySelector('.folder:last-child');
-        if (folderElement) {
-            folderElement.classList.toggle('collapsed');
-        }
-    }
+    SprintTodoApp.prototype.toggleFolder = function(folderId) {
+        const folderElement = document.querySelector(`[data-folder-id="${folderId}"]`);
+        if (!folderElement) return;
 
-    showInlineTaskForm(folderId) {
+        // Toggle class
+        folderElement.classList.toggle('collapsed');
+
+        // Persist state (true = collapsed)
+        const isCollapsed = folderElement.classList.contains('collapsed');
+        this.folderStates[folderId] = isCollapsed;
+        localStorage.setItem('sprint-todo-folder-states', JSON.stringify(this.folderStates));
+
+        // Update chevron
+        const icon = folderElement.querySelector('.folder-toggle');
+        if (icon) {
+            icon.className = `fas fa-chevron-${isCollapsed ? 'right' : 'down'} folder-toggle`;
+        }
+    };
+
+    SprintTodoApp.prototype.showInlineTaskForm = function(folderId) {
         const form = document.getElementById('inline-task-form');
         const titleInput = document.getElementById('inline-task-title');
         
@@ -1838,13 +1950,13 @@ class SprintTodoApp {
         document.getElementById('inline-task-form-element').reset();
     }
 
-    closeInlineTaskForm() {
+    SprintTodoApp.prototype.closeInlineTaskForm = function() {
         const form = document.getElementById('inline-task-form');
         form.style.display = 'none';
         form.dataset.folderId = '';
     }
 
-    saveInlineTask() {
+    SprintTodoApp.prototype.saveInlineTask = function() {
         const folderId = document.getElementById('inline-task-form').dataset.folderId || null;
         const taskData = {
             title: document.getElementById('inline-task-title').value,
@@ -1867,7 +1979,7 @@ class SprintTodoApp {
         this.showNotification('Task created successfully!');
     }
 
-    createQuickTask(inputElement, folderId) {
+    SprintTodoApp.prototype.createQuickTask = function(inputElement, folderId) {
         const taskTitle = inputElement.value.trim();
         
         if (!taskTitle) {
@@ -1895,7 +2007,7 @@ class SprintTodoApp {
         this.showNotification('Task created successfully!');
     }
 
-    setupBacklogDragAndDrop() {
+    SprintTodoApp.prototype.setupBacklogDragAndDrop = function() {
         // Set up drag and drop for the backlog
         document.addEventListener('dragstart', (e) => {
             if (e.target.classList.contains('task-item')) {
@@ -1946,7 +2058,7 @@ class SprintTodoApp {
         });
     }
 
-    handleDragOverTask(taskElement, e) {
+    SprintTodoApp.prototype.handleDragOverTask = function(taskElement, e) {
         const rect = taskElement.getBoundingClientRect();
         const midpoint = rect.top + rect.height / 2;
         
@@ -1959,11 +2071,11 @@ class SprintTodoApp {
         }
     }
 
-    handleDragOverFolder(folderContent, e) {
+    SprintTodoApp.prototype.handleDragOverFolder = function(folderContent, e) {
         folderContent.classList.add('drag-over');
     }
 
-    handleDropOnTask(taskElement, e) {
+    SprintTodoApp.prototype.handleDropOnTask = function(taskElement, e) {
         e.preventDefault();
         
         const rect = taskElement.getBoundingClientRect();
@@ -1992,7 +2104,7 @@ class SprintTodoApp {
         this.render();
     }
 
-    handleDropOnFolder(folderContent, e) {
+    SprintTodoApp.prototype.handleDropOnFolder = function(folderContent, e) {
         e.preventDefault();
         
         // Get the folder ID from the folder content
@@ -2011,7 +2123,7 @@ class SprintTodoApp {
         this.render();
     }
 
-    reorderTasks(draggedTask, targetTask, dropBefore) {
+    SprintTodoApp.prototype.reorderTasks = function(draggedTask, targetTask, dropBefore) {
         const draggedIndex = this.tasks.findIndex(t => t.id === draggedTask.id);
         const targetIndex = this.tasks.findIndex(t => t.id === targetTask.id);
         
@@ -2033,7 +2145,7 @@ class SprintTodoApp {
         this.saveData();
     }
 
-    moveTaskToFolder(task, newFolderId) {
+    SprintTodoApp.prototype.moveTaskToFolder = function(task, newFolderId) {
         const taskIndex = this.tasks.findIndex(t => t.id === task.id);
         if (taskIndex !== -1) {
             this.tasks[taskIndex].folderId = newFolderId;
@@ -2046,7 +2158,7 @@ class SprintTodoApp {
         }
     }
 
-    clearDragOverStyles() {
+    SprintTodoApp.prototype.clearDragOverStyles = function() {
         // Remove all drag over styles
         document.querySelectorAll('.task-item').forEach(task => {
             task.style.borderTop = 'none';
@@ -2058,7 +2170,7 @@ class SprintTodoApp {
         });
     }
 
-    setupContextMenu() {
+    SprintTodoApp.prototype.setupContextMenu = function() {
         const contextMenu = document.getElementById('context-menu');
         
         // Right-click on task items
@@ -2084,7 +2196,7 @@ class SprintTodoApp {
         });
     }
 
-    showContextMenu(x, y) {
+    SprintTodoApp.prototype.showContextMenu = function(x, y) {
         const contextMenu = document.getElementById('context-menu');
         
         // Position the context menu
@@ -2104,13 +2216,13 @@ class SprintTodoApp {
         contextMenu.style.display = 'block';
     }
 
-    hideContextMenu() {
+    SprintTodoApp.prototype.hideContextMenu = function() {
         const contextMenu = document.getElementById('context-menu');
         contextMenu.style.display = 'none';
         this.contextMenuTaskId = null;
     }
 
-    assignToSprint() {
+    SprintTodoApp.prototype.assignToSprint = function() {
         if (!this.contextMenuTaskId) return;
         
         const task = this.getTask(this.contextMenuTaskId);
@@ -2141,7 +2253,7 @@ class SprintTodoApp {
         this.showSprintSelectionDialog(availableSprints);
     }
 
-    showSprintSelectionDialog(sprints) {
+    SprintTodoApp.prototype.showSprintSelectionDialog = function(sprints) {
         const dialog = document.createElement('div');
         dialog.className = 'sprint-selection-dialog';
         dialog.style.cssText = `
@@ -2198,7 +2310,7 @@ class SprintTodoApp {
         }, 100);
     }
 
-    confirmSprintAssignment(sprintId) {
+    SprintTodoApp.prototype.confirmSprintAssignment = function(sprintId) {
         if (!this.contextMenuTaskId) return;
         
         const sprint = this.getSprint(sprintId);
@@ -2221,19 +2333,19 @@ class SprintTodoApp {
         }
     }
 
-    editTaskFromMenu() {
+    SprintTodoApp.prototype.editTaskFromMenu = function() {
         if (!this.contextMenuTaskId) return;
         this.editTask(this.contextMenuTaskId);
         this.hideContextMenu();
     }
 
-    deleteTaskFromMenu() {
+    SprintTodoApp.prototype.deleteTaskFromMenu = function() {
         if (!this.contextMenuTaskId) return;
         this.deleteTask(this.contextMenuTaskId);
         this.hideContextMenu();
     }
 
-    assignTaskToSprint(taskId, sprintId) {
+    SprintTodoApp.prototype.assignTaskToSprint = function(taskId, sprintId) {
         if (!taskId) return;
         
         const task = this.getTask(taskId);
@@ -2259,7 +2371,7 @@ class SprintTodoApp {
         this.render();
     }
 
-    updateTaskPriority(taskId, priority) {
+    SprintTodoApp.prototype.updateTaskPriority = function(taskId, priority) {
         if (!taskId || !priority) return;
         
         const task = this.getTask(taskId);
@@ -2275,7 +2387,7 @@ class SprintTodoApp {
         this.render();
     }
 
-    updateTaskPoints(taskId, points) {
+    SprintTodoApp.prototype.updateTaskPoints = function(taskId, points) {
         if (!taskId || !points) return;
         
         const task = this.getTask(taskId);
@@ -2291,7 +2403,7 @@ class SprintTodoApp {
         this.render();
     }
 
-    showNotification(message) {
+    SprintTodoApp.prototype.showNotification = function(message) {
         // Create a simple notification
         const notification = document.createElement('div');
         notification.className = 'notification';
@@ -2317,7 +2429,7 @@ class SprintTodoApp {
         }, 3000);
     }
 
-    toggleSubtasks(taskId) {
+    SprintTodoApp.prototype.toggleSubtasks = function(taskId) {
         console.log('toggleSubtasks called with taskId:', taskId);
         const task = this.getTask(taskId);
         if (!task) {
@@ -2351,14 +2463,14 @@ class SprintTodoApp {
     }
 
     // Placeholder methods for future implementation
-    editTask(taskId) {
+    SprintTodoApp.prototype.editTask = function(taskId) {
         const task = this.getTask(taskId);
         if (task) {
             this.openTaskModal(task);
         }
     }
 
-    deleteTask(taskId) {
+    SprintTodoApp.prototype.deleteTask = function(taskId) {
         if (confirm('Are you sure you want to delete this task?')) {
             this.tasks = this.tasks.filter(t => t.id !== taskId);
             this.saveData();
@@ -2367,14 +2479,14 @@ class SprintTodoApp {
         }
     }
 
-    editSprint(sprintId) {
+    SprintTodoApp.prototype.editSprint = function(sprintId) {
         const sprint = this.getSprint(sprintId);
         if (sprint) {
             this.openSprintModal(sprint);
         }
     }
 
-    deleteSprint(sprintId) {
+    SprintTodoApp.prototype.deleteSprint = function(sprintId) {
         if (confirm('Are you sure you want to delete this sprint? Tasks will be moved to backlog.')) {
             this.deleteSprint(sprintId);
             this.render();
@@ -2382,12 +2494,12 @@ class SprintTodoApp {
         }
     }
 
-    editFolder(folderId) {
+    SprintTodoApp.prototype.editFolder = function(folderId) {
         // Placeholder for folder editing
         console.log('Edit folder:', folderId);
     }
 
-    deleteFolder(folderId) {
+    SprintTodoApp.prototype.deleteFolder = function(folderId) {
         if (confirm('Are you sure you want to delete this folder? Tasks will be moved to unfiled.')) {
             // Move tasks from this folder to backlog
             this.tasks.forEach(task => {
@@ -2399,6 +2511,10 @@ class SprintTodoApp {
             // Delete the folder
             this.folders = this.folders.filter(f => f.id !== folderId);
             
+            // NEW: forget its persisted collapsed state
+            delete this.folderStates[folderId];
+            localStorage.setItem('sprint-todo-folder-states', JSON.stringify(this.folderStates));
+
             // Save and refresh
             this.saveData();
             this.render();
@@ -2406,35 +2522,65 @@ class SprintTodoApp {
         }
     }
 
-    viewSprintBoard(sprintId) {
+    SprintTodoApp.prototype.viewSprintBoard = function(sprintId) {
         this.currentSprint = this.getSprint(sprintId);
         document.getElementById('sprint-selector').value = sprintId;
         this.switchView('board');
     }
 
-    showCreateFolderDialog() {
+    SprintTodoApp.prototype.showCreateFolderDialog = function() {
         const name = prompt('Enter folder name:');
         if (name) {
             this.createFolder({ name });
             this.render();
             this.showNotification('Folder created successfully!');
         }
-    }
+    };
+    
+    // Convert all remaining methods to prototype syntax
+    SprintTodoApp.prototype.init = function() {
+        // Load data from localStorage
+        this.loadData();
+        
+        // Set up event listeners
+        this.setupEventListeners();
+        
+        // Add event listener for create folder button
+        document.getElementById('create-folder-btn').addEventListener('click', function() {
+            this.showCreateFolderDialog();
+        }.bind(this));
+        
+        // Set up event delegation for dynamic elements
+        this.setupEventDelegation();
+        
+        // Initialize the UI
+        this.render();
+        
+        // Set up drag and drop
+        this.setupDragAndDrop();
+        
+        // Set up backlog drag and drop
+        this.setupBacklogDragAndDrop();
+        
+        // Set up context menu
+        this.setupContextMenu();
+    };
+    
+    // Add all other methods in the same prototype pattern...
 
-    showAddSubtaskDialog(parentTaskId) {
+    SprintTodoApp.prototype.showAddSubtaskDialog = function(parentTaskId) {
         const title = prompt('Enter subtask title:');
         if (title) {
             this.createSubtask(parentTaskId, { title });
             this.render();
             this.showNotification('Subtask created successfully!');
         }
-    }
-}
+    };
 
 // Initialize the app when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
+(function() {
     window.app = new SprintTodoApp();
-});
+})();
 
 // Add CSS animation for notifications
 const style = document.createElement('style');

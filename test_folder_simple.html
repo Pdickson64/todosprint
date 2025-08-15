@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Folder State Persistence Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .folder {
+            border: 1px solid #ccc;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .folder-header {
+            background: #f5f5f5;
+            padding: 10px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .folder-content {
+            padding: 10px;
+            border-top: 1px solid #eee;
+        }
+        .folder-content.collapsed {
+            display: none;
+        }
+        .folder-toggle {
+            margin-right: 10px;
+        }
+        .test-controls {
+            margin: 20px 0;
+        }
+        .btn {
+            padding: 8px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <h1>Folder State Persistence Test</h1>
+    
+    <div class="test-container">
+        <h2>Test Instructions</h2>
+        <ol>
+            <li>Click on folder headers to expand/collapse them</li>
+            <li>Refresh the page to see if states persist</li>
+            <li>Use the controls below to test different scenarios</li>
+        </ol>
+    </div>
+
+    <div class="test-controls">
+        <button class="btn btn-primary" onclick="addTestFolder()">Add Test Folder</button>
+        <button class="btn btn-secondary" onclick="clearAllFolders()">Clear All Folders</button>
+        <button class="btn btn-secondary" onclick="testLocalStorage()">Test localStorage</button>
+    </div>
+
+    <div id="test-status" class="status info">
+        Ready to test folder state persistence
+    </div>
+
+    <div id="backlog-container">
+        <!-- Folders will be added here dynamically -->
+    </div>
+
+    <script>
+        // Simple test implementation
+        class TestFolderApp {
+            constructor() {
+                this.folders = [];
+                this.folderState = {};
+                this.loadData();
+                this.render();
+            }
+
+            loadData() {
+                const savedFolders = localStorage.getItem('test-folders');
+                const savedFolderState = localStorage.getItem('test-folder-state');
+                
+                if (savedFolders) {
+                    this.folders = JSON.parse(savedFolders);
+                }
+                
+                if (savedFolderState) {
+                    this.folderState = JSON.parse(savedFolderState);
+                } else {
+                    // Initialize folderState with all folders expanded by default
+                    this.folders.forEach(folder => {
+                        this.folderState[folder.id] = true; // true = expanded, false = collapsed
+                    });
+                }
+            }
+
+            saveData() {
+                localStorage.setItem('test-folders', JSON.stringify(this.folders));
+                localStorage.setItem('test-folder-state', JSON.stringify(this.folderState));
+            }
+
+            getFolderExpanded(folderId) {
+                return this.folderState[folderId] !== undefined ? this.folderState[folderId] : true;
+            }
+
+            setFolderExpanded(folderId, expanded) {
+                this.folderState[folderId] = expanded;
+                this.saveData();
+            }
+
+            createFolder(name) {
+                const folder = {
+                    id: Date.now().toString(),
+                    name: name,
+                    description: 'Test folder'
+                };
+                
+                this.folders.push(folder);
+                // Initialize as expanded
+                this.folderState[folder.id] = true;
+                this.saveData();
+                this.render();
+                return folder;
+            }
+
+            deleteFolder(folderId) {
+                this.folders = this.folders.filter(f => f.id !== folderId);
+                delete this.folderState[folderId];
+                this.saveData();
+                this.render();
+            }
+
+            toggleFolder(folderId) {
+                const isExpanded = this.getFolderExpanded(folderId);
+                const newExpandedState = !isExpanded;
+                
+                // Update the folder state
+                this.setFolderExpanded(folderId, newExpandedState);
+                
+                // Update the UI
+                const folderElement = document.querySelector(`[data-folder-id="${folderId}"]`);
+                if (folderElement) {
+                    folderElement.classList.toggle('collapsed');
+                    
+                    // Update the toggle icon
+                    const toggleIcon = folderElement.querySelector('.folder-toggle');
+                    if (toggleIcon) {
+                        toggleIcon.className = `fas fa-chevron-${newExpandedState ? 'down' : 'right'} folder-toggle`;
+                    }
+                }
+            }
+
+            render() {
+                const container = document.getElementById('backlog-container');
+                container.innerHTML = '';
+                
+                // Render folders
+                this.folders.forEach(folder => {
+                    const folderElement = this.createFolderElement(folder);
+                    container.appendChild(folderElement);
+                });
+            }
+
+            createFolderElement(folder) {
+                const isExpanded = this.getFolderExpanded(folder.id);
+                const folderElement = document.createElement('div');
+                folderElement.className = 'folder';
+                folderElement.dataset.folderId = folder.id;
+                folderElement.innerHTML = `
+                    <div class="folder-header" onclick="testApp.toggleFolder('${folder.id}')">
+                        <div class="folder-title">
+                            <i class="fas fa-chevron-${isExpanded ? 'down' : 'right'} folder-toggle"></i>
+                            ${folder.name}
+                        </div>
+                        <div class="folder-actions">
+                            <button class="btn btn-secondary" onclick="event.stopPropagation(); testApp.deleteFolder('${folder.id}')">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                    <div class="folder-content ${isExpanded ? '' : 'collapsed'}">
+                        <p>This is a test folder. Click the header to expand/collapse.</p>
+                    </div>
+                `;
+                return folderElement;
+            }
+
+            showStatus(message, type = 'info') {
+                const statusElement = document.getElementById('test-status');
+                statusElement.textContent = message;
+                statusElement.className = `status ${type}`;
+            }
+        }
+
+        // Initialize the test app
+        const testApp = new TestFolderApp();
+
+        // Test functions
+        function addTestFolder() {
+            const folderName = prompt('Enter folder name:');
+            if (folderName) {
+                testApp.createFolder(folderName);
+                testApp.showStatus(`Folder "${folderName}" created successfully!`, 'success');
+            }
+        }
+
+        function clearAllFolders() {
+            if (confirm('Are you sure you want to clear all folders?')) {
+                testApp.folders = [];
+                testApp.folderState = {};
+                testApp.saveData();
+                testApp.render();
+                testApp.showStatus('All folders cleared!', 'success');
+            }
+        }
+
+        function testLocalStorage() {
+            const savedState = localStorage.getItem('test-folder-state');
+            if (savedState) {
+                testApp.showStatus(`localStorage contains folder state: ${savedState}`, 'success');
+            } else {
+                testApp.showStatus('No folder state found in localStorage', 'info');
+            }
+        }
+
+        // Add Font Awesome for icons
+        const fontAwesome = document.createElement('link');
+        fontAwesome.rel = 'stylesheet';
+        fontAwesome.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css';
+        document.head.appendChild(fontAwesome);
+
+        // Show initial status
+        testApp.showStatus(`Test initialized with ${testApp.folders.length} folders. Try expanding/collapsing folders and then refresh the page!`, 'info');
+    </script>
+</body>
+</html>
