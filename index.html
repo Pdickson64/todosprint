@@ -58,8 +58,40 @@
                         </button>
                     </div>
                 </div>
-                <div class="backlog-container" id="backlog-container">
-                    <!-- Backlog folders and tasks will be dynamically added here -->
+                <div class="backlog-layout">
+                    <!-- Sidebar for folders -->
+                    <div class="folder-sidebar" id="folder-sidebar">
+                        <div class="sidebar-header">
+                            <h3>Folders</h3>
+                        </div>
+                        <div class="folder-list" id="folder-list">
+                            <!-- Folders will be dynamically added here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Main content area for tasks -->
+                    <div class="task-main-content" id="task-main-content">
+                        <div class="task-header">
+                            <h3 id="current-folder-title">All Tasks</h3>
+                            <div class="task-actions">
+                                <button id="add-task-to-folder-btn" class="btn-primary">
+                                    <i class="fas fa-plus"></i> Add Task
+                                </button>
+                            </div>
+                        </div>
+                        <div class="task-table-container" id="task-table-container">
+                            <div class="task-table-header">
+                                <div class="task-col-title">Task</div>
+                                <div class="task-col-points">Points</div>
+                                <div class="task-col-priority">Priority</div>
+                                <div class="task-col-due">Due Date</div>
+                                <div class="task-col-actions">Actions</div>
+                            </div>
+                            <div class="task-table-body" id="task-table-body">
+                                <!-- Tasks will be dynamically added here -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

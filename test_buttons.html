@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Button Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <i class="fas fa-tasks"></i>
+                <h1>Sprint Todo</h1>
+            </div>
+            <div class="user-actions">
+                <button id="add-task-btn" class="btn-primary">
+                    <i class="fas fa-plus"></i> Add Task
+                </button>
+            </div>
+        </header>
+
+        <!-- Backlog View -->
+        <div id="backlog-view" class="view active">
+            <div class="backlog-header">
+                <h2>Product Backlog</h2>
+                <div class="backlog-actions">
+                    <button id="add-to-backlog-btn" class="btn-secondary">
+                        <i class="fas fa-plus"></i> Add to Backlog
+                    </button>
+                </div>
+            </div>
+            <div class="backlog-layout">
+                <div class="task-main-content" id="task-main-content">
+                    <div class="task-header">
+                        <h3 id="current-folder-title">All Tasks</h3>
+                        <div class="task-actions">
+                            <button id="add-task-to-folder-btn" class="btn-primary">
+                                <i class="fas fa-plus"></i> Add Task
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Task Modal -->
+        <div id="task-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modal-title">Create Task</h3>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <form id="task-form">
+                    <div class="form-group">
+                        <label for="task-title">Title</label>
+                        <input type="text" id="task-title" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Save Task</button>
+                        <button type="button" class="btn-secondary cancel-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    <script src="app.js?v=20250814-8"></script>
+    
+    <script>
+        // Test button functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, testing buttons...');
+            
+            // Test each button
+            const buttons = [
+                'add-task-btn',
+                'add-to-backlog-btn', 
+                'add-task-to-folder-btn'
+            ];
+            
+            buttons.forEach(buttonId => {
+                const button = document.getElementById(buttonId);
+                if (button) {
+                    console.log(`Found button: ${buttonId}`);
+                    button.addEventListener('click', function() {
+                        console.log(`Button clicked: ${buttonId}`);
+                        try {
+                            if (typeof app !== 'undefined' && typeof app.openTaskModal === 'function') {
+                                console.log('Calling app.openTaskModal()...');
+                                app.openTaskModal();
+                                console.log('Modal should be open now');
+                            } else {
+                                console.error('app or app.openTaskModal is not defined');
+                            }
+                        } catch (error) {
+                            console.error(`Error clicking ${buttonId}:`, error);
+                        }
+                    });
+                } else {
+                    console.error(`Button not found: ${buttonId}`);
+                }
+            });
+            
+            // Test modal visibility
+            const modal = document.getElementById('task-modal');
+            if (modal) {
+                console.log('Task modal found');
+                // Add a test button to manually open modal
+                const testBtn = document.createElement('button');
+                testBtn.textContent = 'Test Modal';
+                testBtn.className = 'btn-primary';
+                testBtn.style.position = 'fixed';
+                testBtn.style.top = '10px';
+                testBtn.style.right = '10px';
+                testBtn.onclick = function() {
+                    console.log('Test button clicked - opening modal');
+                    modal.classList.add('active');
+                };
+                document.body.appendChild(testBtn);
+            } else {
+                console.error('Task modal not found');
+            }
+        });
+    </script>
+</body>
+</html>

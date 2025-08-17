@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subtask Functionality Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <div class="app-header">
+            <div class="logo">
+                <i class="fas fa-tasks"></i>
+                <h1>Sprint Todo App</h1>
+            </div>
+            <div class="main-nav">
+                <button class="nav-btn active" onclick="switchView('backlog')">Backlog</button>
+                <button class="nav-btn" onclick="switchView('sprints')">Sprints</button>
+                <button class="nav-btn" onclick="switchView('board')">Board</button>
+                <button class="nav-btn" onclick="switchView('analysis')">Analysis</button>
+            </div>
+            <div class="user-actions">
+                <button class="btn-primary" onclick="showCreateFolderDialog()">
+                    <i class="fas fa-folder-plus"></i> New Folder
+                </button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div id="backlog-view" class="view active">
+                <div class="backlog-layout">
+                    <div class="folder-sidebar">
+                        <div class="sidebar-header">
+                            <h3>Folders</h3>
+                        </div>
+                        <div class="folder-list">
+                            <div class="folder-item active" data-folder-id="all" onclick="selectFolder('all')">
+                                <i class="fas fa-inbox"></i>
+                                <span class="folder-name">All Tasks</span>
+                                <span class="folder-count" id="all-count">0</span>
+                            </div>
+                            <div class="folder-item" data-folder-id="work" onclick="selectFolder('work')">
+                                <i class="fas fa-briefcase"></i>
+                                <span class="folder-name">Work</span>
+                                <span class="folder-count" id="work-count">0</span>
+                            </div>
+                            <div class="folder-item" data-folder-id="personal" onclick="selectFolder('personal')">
+                                <i class="fas fa-user"></i>
+                                <span class="folder-name">Personal</span>
+                                <span class="folder-count" id="personal-count">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="task-main-content">
+                        <div class="task-header">
+                            <h3 id="current-folder-title">All Tasks</h3>
+                            <div class="task-actions">
+                                <button class="btn-secondary" onclick="openInlineTaskForm()">
+                                    <i class="fas fa-plus"></i> Quick Add
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="task-table-container">
+                            <div class="task-table-header">
+                                <div class="task-col-title">Task</div>
+                                <div class="task-col-points">Points</div>
+                                <div class="task-col-priority">Priority</div>
+                                <div class="task-col-due">Due Date</div>
+                                <div class="task-col-actions">Actions</div>
+                            </div>
+                            <div class="task-table-body" id="task-table-body">
+                                <!-- Tasks will be rendered here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Test subtask functionality
+        function testSubtaskFunctionality() {
+            console.log('Testing subtask functionality...');
+            
+            // Create a parent task
+            const parentTask = {
+                title: 'Parent Task',
+                description: 'This is a parent task',
+                points: 5,
+                priority: 'high',
+                dueDate: '2025-08-20',
+                folderId: 'work'
+            };
+            
+            // Create the parent task
+            const createdParent = window.app.createTask(parentTask);
+            console.log('Created parent task:', createdParent);
+            
+            // Create a subtask
+            const subtask = {
+                title: 'Subtask 1',
+                description: 'This is a subtask',
+                points: 2,
+                priority: 'medium',
+                dueDate: '2025-08-18',
+                folderId: 'work'
+            };
+            
+            window.app.createSubtask(createdParent.id, subtask);
+            console.log('Created subtask:', subtask);
+            
+            // Create another subtask
+            const subtask2 = {
+                title: 'Subtask 2',
+                description: 'This is another subtask',
+                points: 3,
+                priority: 'low',
+                dueDate: '2025-08-19',
+                folderId: 'work'
+            };
+            
+            window.app.createSubtask(createdParent.id, subtask2);
+            console.log('Created subtask 2:', subtask2);
+            
+            // Render tasks to see if they appear hierarchically
+            window.app.renderTasks('work');
+            console.log('Rendered tasks for work folder');
+            
+            // Check if the parent task has subtasks
+            const parentTaskData = window.app.getTask(createdParent.id);
+            console.log('Parent task data:', parentTaskData);
+            
+            // Check if subtasks are properly nested
+            if (parentTaskData.subtasks && parentTaskData.subtasks.length > 0) {
+                console.log('✅ Parent task has subtasks:', parentTaskData.subtasks);
+            } else {
+                console.log('❌ Parent task does not have subtasks');
+            }
+            
+            // Test toggle functionality
+            if (parentTaskData.subtasks && parentTaskData.subtasks.length > 0) {
+                window.app.toggleSubtasks(createdParent.id);
+                console.log('Toggled subtasks for parent task');
+                
+                // Check if expanded state changed
+                const updatedParentTask = window.app.getTask(createdParent.id);
+                console.log('Updated parent task expanded state:', updatedParentTask.expanded);
+            }
+            
+            console.log('Subtask functionality test completed');
+        }
+        
+        // Run the test when the page loads
+        window.addEventListener('load', function() {
+            setTimeout(testSubtaskFunctionality, 1000);
+        });
+    </script>
+</body>
+</html>

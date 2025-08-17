@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Sprint Todo App</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <i class="fas fa-tasks"></i>
+                <h1>Sprint Todo Test</h1>
+            </div>
+            <div class="user-actions">
+                <button id="add-task-btn" class="btn-primary">
+                    <i class="fas fa-plus"></i> Add Task
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Backlog View -->
+            <div id="backlog-view" class="view active">
+                <div class="backlog-header">
+                    <h2>Product Backlog</h2>
+                    <div class="backlog-actions">
+                        <button id="create-folder-btn" class="btn-secondary">
+                            <i class="fas fa-folder-plus"></i> Create Folder
+                        </button>
+                        <button id="add-to-backlog-btn" class="btn-secondary">
+                            <i class="fas fa-plus"></i> Add to Backlog
+                        </button>
+                    </div>
+                </div>
+                <div class="backlog-layout">
+                    <!-- Sidebar for folders -->
+                    <div class="folder-sidebar" id="folder-sidebar">
+                        <div class="sidebar-header">
+                            <h3>Folders</h3>
+                        </div>
+                        <div class="folder-list" id="folder-list">
+                            <!-- Folders will be dynamically added here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Main content area for tasks -->
+                    <div class="task-main-content" id="task-main-content">
+                        <div class="task-header">
+                            <h3 id="current-folder-title">All Tasks</h3>
+                            <div class="task-actions">
+                                <button id="add-task-to-folder-btn" class="btn-primary">
+                                    <i class="fas fa-plus"></i> Add Task
+                                </button>
+                            </div>
+                        </div>
+                        <div class="task-table-container" id="task-table-container">
+                            <div class="task-table-header">
+                                <div class="task-col-checkbox"></div>
+                                <div class="task-col-title">Task</div>
+                                <div class="task-col-points">Points</div>
+                                <div class="task-col-priority">Priority</div>
+                                <div class="task-col-sprint">Sprint</div>
+                                <div class="task-col-due">Due Date</div>
+                                <div class="task-col-actions">Actions</div>
+                            </div>
+                            <div class="task-table-body" id="task-table-body">
+                                <!-- Tasks will be dynamically added here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Task Modal -->
+        <div id="task-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modal-title">Create Task</h3>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <form id="task-form">
+                    <div class="form-group">
+                        <label for="task-title">Title</label>
+                        <input type="text" id="task-title" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="task-description">Description</label>
+                        <textarea id="task-description"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="task-points">Story Points</label>
+                            <input type="number" id="task-points" min="1" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="task-priority">Priority</label>
+                            <select id="task-priority">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="task-due-date">Due Date</label>
+                            <input type="date" id="task-due-date">
+                        </div>
+                        <div class="form-group">
+                            <label for="task-sprint">Sprint</label>
+                            <select id="task-sprint">
+                                <option value="">No Sprint</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Save Task</button>
+                        <button type="button" class="btn-secondary cancel-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script src="app.js"></script>
+    </div>
+</body>
+</html>

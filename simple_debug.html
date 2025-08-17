@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Debug Test</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <i class="fas fa-tasks"></i>
+                <h1>Sprint Todo</h1>
+            </div>
+            <div class="user-actions">
+                <button id="add-task-btn" class="btn-primary">
+                    <i class="fas fa-plus"></i> Add Task
+                </button>
+            </div>
+        </header>
+
+        <!-- Task Modal -->
+        <div id="task-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="modal-title">Create Task</h3>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <form id="task-form">
+                    <div class="form-group">
+                        <label for="task-title">Title</label>
+                        <input type="text" id="task-title" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Save Task</button>
+                        <button type="button" class="btn-secondary cancel-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple debug script
+        console.log('Starting debug test...');
+        
+        // Check if DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded');
+            
+            // Check if app exists
+            if (typeof window.app === 'undefined') {
+                console.log('App not loaded yet, waiting...');
+                
+                // Wait for app to load
+                setTimeout(function() {
+                    console.log('Checking app again...');
+                    if (typeof window.app !== 'undefined') {
+                        console.log('App loaded successfully');
+                        testButtons();
+                    } else {
+                        console.error('App failed to load');
+                    }
+                }, 1000);
+            } else {
+                console.log('App already loaded');
+                testButtons();
+            }
+        });
+        
+        function testButtons() {
+            // Test button elements
+            const addTaskBtn = document.getElementById('add-task-btn');
+            const modal = document.getElementById('task-modal');
+            const form = document.getElementById('task-form');
+            
+            console.log('Add Task button:', addTaskBtn);
+            console.log('Modal:', modal);
+            console.log('Form:', form);
+            
+            // Test button click
+            if (addTaskBtn) {
+                addTaskBtn.addEventListener('click', function() {
+                    console.log('Add Task button clicked!');
+                    if (modal) {
+                        modal.classList.add('active');
+                        console.log('Modal opened');
+                    } else {
+                        console.error('Modal not found');
+                    }
+                });
+            } else {
+                console.error('Add Task button not found');
+            }
+            
+            // Test modal close
+            const closeBtn = document.querySelector('.close-btn');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', function() {
+                    console.log('Close button clicked');
+                    if (modal) {
+                        modal.classList.remove('active');
+                        console.log('Modal closed');
+                    }
+                });
+            }
+            
+            // Test form submission
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    console.log('Form submitted');
+                    if (modal) {
+                        modal.classList.remove('active');
+                    }
+                });
+            }
+        }
+    </script>
+    <script src="app.js?v=20250814-8"></script>
+</body>
+</html>

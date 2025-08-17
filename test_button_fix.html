@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Button Fix Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Button Fix Test</h1>
+        <p>This page tests whether the add task buttons are working correctly.</p>
+        
+        <div id="test-results"></div>
+        
+        <div style="margin-top: 20px;">
+            <h3>Test the buttons:</h3>
+            <button id="add-task-btn">Add Task (Header)</button>
+            <button id="add-to-backlog-btn">Add to Backlog</button>
+            <button id="add-task-to-folder-btn">Add to Folder</button>
+        </div>
+        
+        <div id="task-modal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); z-index: 1000;">
+            <h3>Task Modal</h3>
+            <p>If you can see this modal, the buttons are working!</p>
+            <button onclick="closeModal()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // Mock the app functionality for testing
+        window.app = {
+            openTaskModal: function() {
+                console.log('openTaskModal called - SUCCESS!');
+                document.getElementById('task-modal').style.display = 'block';
+                addTestResult('openTaskModal() method called successfully!', 'success');
+            }
+        };
+
+        // Test button functionality
+        function testButton(buttonId, buttonName) {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                button.addEventListener('click', function() {
+                    addTestResult(`${buttonName} button clicked!`, 'info');
+                    app.openTaskModal();
+                });
+                addTestResult(`${buttonName} button found and event listener attached`, 'success');
+            } else {
+                addTestResult(`${buttonName} button NOT found!`, 'error');
+            }
+        }
+
+        function addTestResult(message, type) {
+            const resultsDiv = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            resultsDiv.appendChild(resultDiv);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function closeModal() {
+            document.getElementById('task-modal').style.display = 'none';
+        }
+
+        // Run tests when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            addTestResult('DOM loaded, testing buttons...', 'info');
+            
+            // Test all three buttons
+            testButton('add-task-btn', 'Add Task (Header)');
+            testButton('add-to-backlog-btn', 'Add to Backlog');
+            testButton('add-task-to-folder-btn', 'Add to Folder');
+            
+            addTestResult('All tests completed. Click the buttons above to test functionality.', 'info');
+        });
+
+        // Close modal when clicking outside
+        document.addEventListener('click', function(e) {
+            const modal = document.getElementById('task-modal');
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>

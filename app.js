@@ -36,9 +36,76 @@ function SprintTodoApp() {
         this.setupEventListeners();
         
         // Add event listener for create folder button
-        document.getElementById('create-folder-btn').addEventListener('click', () => {
-            this.showCreateFolderDialog();
-        });
+        const createFolderBtn = document.getElementById('create-folder-btn');
+        if (createFolderBtn) {
+            createFolderBtn.addEventListener('click', () => {
+                this.showCreateFolderDialog();
+            });
+        }
+        
+        // Add event listeners for task creation buttons
+        const addTaskBtn = document.getElementById('add-task-btn');
+        if (addTaskBtn) {
+            addTaskBtn.addEventListener('click', () => {
+                console.log('Add Task button clicked');
+                this.openTaskModal();
+            });
+        }
+        
+        const addToBacklogBtn = document.getElementById('add-to-backlog-btn');
+        if (addToBacklogBtn) {
+            addToBacklogBtn.addEventListener('click', () => {
+                console.log('Add to Backlog button clicked');
+                this.openTaskModal();
+            });
+        }
+        
+        const addToFolderBtn = document.getElementById('add-task-to-folder-btn');
+        if (addToFolderBtn) {
+            addToFolderBtn.addEventListener('click', () => {
+                console.log('Add to Folder button clicked');
+                this.openTaskModal();
+            });
+        }
+        
+        // Add event listener for inline task form
+        const inlineTaskForm = document.getElementById('inline-task-form-element');
+        if (inlineTaskForm) {
+            inlineTaskForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const formData = new FormData(inlineTaskForm);
+                const taskData = {
+                    title: document.getElementById('inline-task-title').value,
+                    points: document.getElementById('inline-task-points').value,
+                    priority: document.getElementById('inline-task-priority').value,
+                    dueDate: document.getElementById('inline-task-due-date').value,
+                    folderId: inlineTaskForm.dataset.folderId || null
+                };
+                this.createInlineTask(taskData);
+            });
+        }
+        
+        // Add event listener for task modal form
+        const taskForm = document.getElementById('task-form');
+        if (taskForm) {
+            taskForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const taskId = taskForm.dataset.taskId;
+                const taskData = {
+                    id: taskId,
+                    title: document.getElementById('task-title').value,
+                    description: document.getElementById('task-description').value,
+                    points: parseInt(document.getElementById('task-points').value) || 1,
+                    priority: document.getElementById('task-priority').value,
+                    dueDate: document.getElementById('task-due-date').value,
+                    sprintId: document.getElementById('task-sprint').value || null,
+                    recurring: document.getElementById('task-recurring').checked,
+                    recurringType: document.getElementById('recurring-type').value,
+                    folderId: taskForm.dataset.folderId || null
+                };
+                this.saveTask(taskData);
+            });
+        }
         
         // Set up event delegation for dynamic elements
         this.setupEventDelegation();
@@ -138,6 +205,16 @@ function SprintTodoApp() {
         
         this.tasks.push(task);
         this.saveData();
+        
+        // Refresh the task table if we're in backlog view
+        if (this.currentView === 'backlog') {
+            const activeFolder = document.querySelector('.folder-item.active');
+            if (activeFolder) {
+                const folderId = activeFolder.dataset.folderId || 'all';
+                this.renderTasks(folderId);
+            }
+        }
+        
         return task;
     }
 
@@ -180,6 +257,16 @@ function SprintTodoApp() {
         parentTask.updatedAt = new Date().toISOString();
         
         this.saveData();
+        
+        // Refresh the task table if we're in backlog view
+        if (this.currentView === 'backlog') {
+            const activeFolder = document.querySelector('.folder-item.active');
+            if (activeFolder) {
+                const folderId = activeFolder.dataset.folderId || 'all';
+                this.renderTasks(folderId);
+            }
+        }
+        
         return subtask;
     }
 
@@ -204,6 +291,15 @@ function SprintTodoApp() {
             }
         }
         
+        // Refresh the task table if we're in backlog view
+        if (this.currentView === 'backlog') {
+            const activeFolder = document.querySelector('.folder-item.active');
+            if (activeFolder) {
+                const folderId = activeFolder.dataset.folderId || 'all';
+                this.renderTasks(folderId);
+            }
+        }
+        
         return subtask;
     }
 
@@ -219,6 +315,16 @@ function SprintTodoApp() {
         }
         
         this.saveData();
+        
+        // Refresh the task table if we're in backlog view
+        if (this.currentView === 'backlog') {
+            const activeFolder = document.querySelector('.folder-item.active');
+            if (activeFolder) {
+                const folderId = activeFolder.dataset.folderId || 'all';
+                this.renderTasks(folderId);
+            }
+        }
+        
         return true;
     }
 
@@ -226,6 +332,16 @@ function SprintTodoApp() {
         const subtask = this.getSubtask(parentTaskId, subtaskId);
         if (subtask) {
             this.updateSubtask(parentTaskId, subtaskId, { completed: !subtask.completed });
+            
+            // Refresh the task table if we're in backlog view
+            if (this.currentView === 'backlog') {
+                const activeFolder = document.querySelector('.folder-item.active');
+                if (activeFolder) {
+                    const folderId = activeFolder.dataset.folderId || 'all';
+                    this.renderTasks(folderId);
+                }
+            }
+            
             return true;
         }
         return false;
@@ -347,15 +463,21 @@ function SprintTodoApp() {
             }
             
             this.saveData();
+            
+            // Refresh the task table if we're in backlog view
+            if (this.currentView === 'backlog') {
+                const activeFolder = document.querySelector('.folder-item.active');
+                if (activeFolder) {
+                    const folderId = activeFolder.dataset.folderId || 'all';
+                    this.renderTasks(folderId);
+                }
+            }
+            
             return this.tasks[taskIndex];
         }
         return null;
     }
 
-    SprintTodoApp.prototype.deleteTask = function(taskId) {
-        this.tasks = this.tasks.filter(t => t.id !== taskId);
-        this.saveData();
-    }
 
     SprintTodoApp.prototype.getTask = function(taskId) {
         return this.tasks.find(t => t.id === taskId);
@@ -436,6 +558,12 @@ function SprintTodoApp() {
          // NEW: default to expanded
         this.folderStates[folder.id] = false;
         this.saveData();
+        
+        // Refresh the folder sidebar if we're in backlog view
+        if (this.currentView === 'backlog') {
+            this.renderFolders();
+        }
+        
         return folder;
     }
 
@@ -448,6 +576,12 @@ function SprintTodoApp() {
                 updatedAt: new Date().toISOString()
             };
             this.saveData();
+            
+            // Refresh the folder sidebar if we're in backlog view
+            if (this.currentView === 'backlog') {
+                this.renderFolders();
+            }
+            
             return this.folders[folderIndex];
         }
         return null;
@@ -466,6 +600,17 @@ function SprintTodoApp() {
 
         // NEW: forget its persisted collapsed state
         delete this.folderStates[folderId];
+        
+        // Refresh the folder sidebar if we're in backlog view
+        if (this.currentView === 'backlog') {
+            this.renderFolders();
+            // Also refresh tasks to show updated folder assignments
+            const activeFolder = document.querySelector('.folder-item.active');
+            if (activeFolder) {
+                const folderId = activeFolder.dataset.folderId || 'all';
+                this.renderTasks(folderId);
+            }
+        }
     }
 
     SprintTodoApp.prototype.getFolder = function(folderId) {
@@ -770,7 +915,7 @@ function SprintTodoApp() {
     SprintTodoApp.prototype.setupEventListeners = function() {
         // Navigation
         const navButtons = document.querySelectorAll('.nav-btn');
-        if (navButtons) {
+        if (navButtons.length > 0) {
             navButtons.forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const view = e.currentTarget.dataset.view;
@@ -779,26 +924,25 @@ function SprintTodoApp() {
             });
         }
         
-        // Task Modal
-        const addTaskBtn = document.getElementById('add-task-btn');
-        if (addTaskBtn) {
-            addTaskBtn.addEventListener('click', () => {
-                this.openTaskModal();
-            });
-        }
-        
-        const addToBacklogBtn = document.getElementById('add-to-backlog-btn');
-        if (addToBacklogBtn) {
-            addToBacklogBtn.addEventListener('click', () => {
-                this.openTaskModal({ folderId: null });
-            });
-        }
-        
+        // Task Modal form submission (moved from init method)
         const taskForm = document.getElementById('task-form');
         if (taskForm) {
             taskForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                this.saveTask();
+                const taskId = taskForm.dataset.taskId;
+                const taskData = {
+                    id: taskId,
+                    title: document.getElementById('task-title').value,
+                    description: document.getElementById('task-description').value,
+                    points: parseInt(document.getElementById('task-points').value) || 1,
+                    priority: document.getElementById('task-priority').value,
+                    dueDate: document.getElementById('task-due-date').value,
+                    sprintId: document.getElementById('task-sprint').value || null,
+                    recurring: document.getElementById('task-recurring').checked,
+                    recurringType: document.getElementById('recurring-type').value,
+                    folderId: taskForm.dataset.folderId || null
+                };
+                this.saveTask(taskData);
             });
         }
         
@@ -865,7 +1009,7 @@ function SprintTodoApp() {
         
         // Modal close buttons
         const closeButtons = document.querySelectorAll('.close-btn, .cancel-btn');
-        if (closeButtons) {
+        if (closeButtons.length > 0) {
             closeButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
                     this.closeModals();
@@ -875,7 +1019,7 @@ function SprintTodoApp() {
         
         // Click outside modal to close
         const modals = document.querySelectorAll('.modal');
-        if (modals) {
+        if (modals.length > 0) {
             modals.forEach(modal => {
                 modal.addEventListener('click', (e) => {
                     if (e.target === modal) {
@@ -992,71 +1136,328 @@ function SprintTodoApp() {
     }
 
     SprintTodoApp.prototype.renderBacklog = function() {
-        const container = document.getElementById('backlog-container');
+        const container = document.getElementById('backlog-view');
         if (!container) return;
         
-        container.innerHTML = '';
+        // Use the existing HTML structure
+        const folderSidebar = document.getElementById('folder-sidebar');
+        const taskTableBody = document.getElementById('task-table-body');
+        const currentFolderTitle = document.getElementById('current-folder-title');
         
-        // Get unfiled tasks first
-        const unfiledTasks = this.tasks.filter(task => !task.folderId);
+        // Clear existing content
+        if (folderSidebar) {
+            const folderList = folderSidebar.querySelector('.folder-list');
+            if (folderList) folderList.innerHTML = '';
+        }
+        
+        if (taskTableBody) {
+            taskTableBody.innerHTML = '';
+        }
         
         // Render folders
+        this.renderFolders();
+        
+        // Render tasks for "All Tasks" by default
+        this.renderTasks('all');
+    }
+
+    SprintTodoApp.prototype.renderFolders = function() {
+        const folderSidebar = document.querySelector('.folder-sidebar');
+        if (!folderSidebar) return;
+        
+        // Clear existing folders
+        const folderList = folderSidebar.querySelector('.folder-list');
+        if (folderList) {
+            folderList.innerHTML = '';
+        } else {
+            folderSidebar.innerHTML = '';
+        }
+        
+        // Add "All Tasks" folder
+        const allTasksFolder = document.createElement('div');
+        allTasksFolder.className = 'folder-item active';
+        allTasksFolder.innerHTML = `
+            <div class="folder-header" onclick="app.selectFolder('all')">
+                <i class="fas fa-tasks"></i>
+                <span>All Tasks</span>
+            </div>
+        `;
+        
+        if (folderList) {
+            folderList.appendChild(allTasksFolder);
+        } else {
+            folderSidebar.appendChild(allTasksFolder);
+        }
+        
+        // Add folders
         this.folders.forEach(folder => {
-            const folderElement = SprintTodoApp.prototype.createFolderElement.call(this, folder);
-
-            // APPLY PERSISTED STATE BEFORE APPEND
-            if (this.folderStates[folder.id]) {
-                folderElement.classList.add('collapsed'); // true means collapsed
-            }
-
-            container.appendChild(folderElement);
-        });
-
-        // Apply persisted collapsed state for 'unfiled'
-        if (unfiledTasks && unfiledTasks.length > 0) {
-            const unfiledContainer = document.createElement('div');
-            unfiledContainer.className = 'folder';
-            unfiledContainer.dataset.folderId = 'unfiled';
-            unfiledContainer.innerHTML = `
-                <div class="folder-header" onclick="app.toggleFolder('unfiled')">
-                    <div class="folder-title">
-                        <i class="fas fa-chevron-down folder-toggle"></i>
-                        Unfiled Tasks
-                    </div>
-                </div>
-                <div class="folder-content">
-                    <div class="folder-tasks">
-                        ${unfiledTasks.map(task => this.createTaskElement(task)).join('')}
-                    </div>
-                    <div class="inline-task-input">
-                        <input type="text" placeholder="Add task..." onkeypress="if(event.key==='Enter') app.createQuickTask(this, null)">
-                        <button class="add-btn" onclick="app.createQuickTask(this, null)">Add</button>
-                    </div>
+            const folderElement = document.createElement('div');
+            folderElement.className = 'folder-item';
+            folderElement.dataset.folderId = folder.id;
+            folderElement.innerHTML = `
+                <div class="folder-header" onclick="app.selectFolder('${folder.id}')">
+                    <i class="fas fa-folder"></i>
+                    <span>${folder.name}</span>
                 </div>
             `;
             
-            // Apply persisted state to unfiled
-            if (this.folderStates['unfiled']) {
-                unfiledContainer.classList.add('collapsed');
-                const icon = unfiledContainer.querySelector('.folder-toggle');
-                if (icon) icon.className = 'fas fa-chevron-right folder-toggle';
+            if (folderList) {
+                folderList.appendChild(folderElement);
+            } else {
+                folderSidebar.appendChild(folderElement);
             }
-            container.appendChild(unfiledContainer);
+        });
+    }
+
+    SprintTodoApp.prototype.renderTasks = function(folderId) {
+        const tableBody = document.getElementById('task-table-body');
+        if (!tableBody) return;
+        
+        // Clear existing tasks
+        tableBody.innerHTML = '';
+        
+        // Get tasks based on folder selection
+        let tasks;
+        if (folderId === 'all') {
+            tasks = this.tasks.filter(task => task.status !== 'done');
+        } else {
+            tasks = this.getTasksAndSubtasksByFolder(folderId);
         }
         
+        // Sort tasks by creation date (newest first)
+        tasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         
-        // Show empty state if no incomplete tasks
-        const incompleteTasks = this.tasks.filter(t => !t.parentTaskId && t.status !== 'done');
-        if (incompleteTasks.length === 0) {
-            container.innerHTML = `
+        // Update current folder title
+        const currentFolderTitle = document.getElementById('current-folder-title');
+        if (currentFolderTitle) {
+            if (folderId === 'all') {
+                currentFolderTitle.textContent = 'All Tasks';
+            } else {
+                const folder = this.getFolder(folderId);
+                currentFolderTitle.textContent = folder ? folder.name : 'Tasks';
+            }
+        }
+    
+    
+        // Render tasks
+        if (tasks.length === 0) {
+            tableBody.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-tasks"></i>
-                    <h3>No incomplete tasks</h3>
-                    <p>All tasks are completed or have been moved to sprints!</p>
+                    <h3>No tasks found</h3>
+                    <p>Create a new task to get started!</p>
                 </div>
             `;
+            return;
         }
+        
+        tasks.forEach(task => {
+            const taskRow = this.createTaskTableRow(task);
+            tableBody.appendChild(taskRow);
+            
+            // Render subtasks if expanded
+            if (task.expanded !== false && task.subtasks && task.subtasks.length > 0) {
+                task.subtasks.forEach(subtask => {
+                    const fullSubtask = this.getTask(subtask.id);
+                    if (fullSubtask) {
+                        const subtaskRow = this.createSubtaskTableRow(fullSubtask, task.id);
+                        tableBody.appendChild(subtaskRow);
+                    }
+                });
+            }
+        });
     }
+
+    SprintTodoApp.prototype.createTaskTableRow = function(task) {
+        const row = document.createElement('div');
+        row.className = 'task-table-row';
+        row.dataset.taskId = task.id;
+        
+        // Get available sprints for dropdown
+        const availableSprints = this.sprints.filter(sprint =>
+            sprint.status === 'upcoming' || sprint.status === 'active'
+        );
+        
+        // Create sprint dropdown
+        const sprintDropdown = availableSprints.length > 0 ? `
+            <select onchange="app.assignTaskToSprint('${task.id}', this.value)">
+                <option value="">No Sprint</option>
+                ${availableSprints.map(sprint =>
+                    `<option value="${sprint.id}" ${task.sprintId === sprint.id ? 'selected' : ''}>
+                        ${sprint.name}
+                    </option>`
+                ).join('')}
+            </select>
+        ` : '<span class="no-sprint">No sprints available</span>';
+        
+        // Create priority dropdown with current value
+        const priorityDropdown = `
+            <select onchange="app.updateTaskPriority('${task.id}', this.value)" class="priority-display priority-${task.priority}">
+                <option value="low" ${task.priority === 'low' ? 'selected' : ''}>Low</option>
+                <option value="medium" ${task.priority === 'medium' ? 'selected' : ''}>Medium</option>
+                <option value="high" ${task.priority === 'high' ? 'selected' : ''}>High</option>
+                <option value="critical" ${task.priority === 'critical' ? 'selected' : ''}>Critical</option>
+            </select>
+        `;
+        
+        // Create story points dropdown with current value
+        const pointsDropdown = `
+            <select onchange="app.updateTaskPoints('${task.id}', this.value)" class="points-display">
+                <option value="1" ${task.points == 1 ? 'selected' : ''}>1</option>
+                <option value="2" ${task.points == 2 ? 'selected' : ''}>2</option>
+                <option value="3" ${task.points == 3 ? 'selected' : ''}>3</option>
+                <option value="5" ${task.points == 5 ? 'selected' : ''}>5</option>
+                <option value="8" ${task.points == 8 ? 'selected' : ''}>8</option>
+                <option value="13" ${task.points == 13 ? 'selected' : ''}>13</option>
+                <option value="20" ${task.points == 20 ? 'selected' : ''}>20</option>
+            </select>
+        `;
+        
+        // Format due date
+        const dueDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date';
+        
+        // Create checkbox for subtasks
+        const checkbox = task.parentTaskId ? `
+            <input type="checkbox" ${task.completed ? 'checked' : ''}
+                    onchange="app.toggleSubtaskComplete('${task.parentTaskId}', '${task.id}')">
+        ` : '';
+        
+        // Add subtask toggle button for tasks with subtasks
+        const subtaskToggle = task.subtasks && task.subtasks.length > 0 ? `
+            <button class="btn-toggle-subtasks" onclick="app.toggleSubtasks('${task.id}')" title="Toggle subtasks">
+                <i class="fas fa-chevron-${task.expanded !== false ? 'down' : 'right'}"></i>
+            </button>
+        ` : '';
+        
+        row.innerHTML = `
+            <div class="task-col-title">
+                ${checkbox}
+                ${subtaskToggle}
+                <span class="task-title-text">${task.title}</span>
+                ${task.parentTaskId ? '<span class="subtask-indicator">Subtask</span>' : ''}
+            </div>
+            <div class="task-col-points">
+                ${pointsDropdown}
+            </div>
+            <div class="task-col-priority">
+                ${priorityDropdown}
+            </div>
+            <div class="task-col-due">${dueDate}</div>
+            <div class="task-col-actions">
+                <button class="btn-secondary" onclick="app.editTask('${task.id}')" title="Edit task">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-secondary" onclick="app.deleteTask('${task.id}')" title="Delete task">
+                    <i class="fas fa-trash"></i>
+                </button>
+                ${!task.parentTaskId ? `
+                    <button class="btn-secondary" onclick="app.showAddSubtaskDialog('${task.id}')" title="Add subtask">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                ` : ''}
+            </div>
+        `;
+        
+        return row;
+    }
+
+    SprintTodoApp.prototype.createSubtaskTableRow = function(subtask, parentTaskId) {
+        const row = document.createElement('div');
+        row.className = 'task-table-row subtask-row';
+        row.dataset.taskId = subtask.id;
+        row.dataset.parentTaskId = parentTaskId;
+        
+        // Get available sprints for dropdown
+        const availableSprints = this.sprints.filter(sprint =>
+            sprint.status === 'upcoming' || sprint.status === 'active'
+        );
+        
+        // Create sprint dropdown
+        const sprintDropdown = availableSprints.length > 0 ? `
+            <select onchange="app.assignTaskToSprint('${subtask.id}', this.value)">
+                <option value="">No Sprint</option>
+                ${availableSprints.map(sprint =>
+                    `<option value="${sprint.id}" ${subtask.sprintId === sprint.id ? 'selected' : ''}>
+                        ${sprint.name}
+                    </option>`
+                ).join('')}
+            </select>
+        ` : '<span class="no-sprint">No sprints available</span>';
+        
+        // Create priority dropdown with current value
+        const priorityDropdown = `
+            <select onchange="app.updateTaskPriority('${subtask.id}', this.value)" class="priority-display priority-${subtask.priority}">
+                <option value="low" ${subtask.priority === 'low' ? 'selected' : ''}>Low</option>
+                <option value="medium" ${subtask.priority === 'medium' ? 'selected' : ''}>Medium</option>
+                <option value="high" ${subtask.priority === 'high' ? 'selected' : ''}>High</option>
+                <option value="critical" ${subtask.priority === 'critical' ? 'selected' : ''}>Critical</option>
+            </select>
+        `;
+        
+        // Create story points dropdown with current value
+        const pointsDropdown = `
+            <select onchange="app.updateTaskPoints('${subtask.id}', this.value)" class="points-display">
+                <option value="1" ${subtask.points == 1 ? 'selected' : ''}>1</option>
+                <option value="2" ${subtask.points == 2 ? 'selected' : ''}>2</option>
+                <option value="3" ${subtask.points == 3 ? 'selected' : ''}>3</option>
+                <option value="5" ${subtask.points == 5 ? 'selected' : ''}>5</option>
+                <option value="8" ${subtask.points == 8 ? 'selected' : ''}>8</option>
+                <option value="13" ${subtask.points == 13 ? 'selected' : ''}>13</option>
+                <option value="20" ${subtask.points == 20 ? 'selected' : ''}>20</option>
+            </select>
+        `;
+        
+        // Format due date
+        const dueDate = subtask.dueDate ? new Date(subtask.dueDate).toLocaleDateString() : 'No due date';
+        
+        // Create checkbox for subtasks
+        const checkbox = `
+            <input type="checkbox" ${subtask.completed ? 'checked' : ''}
+                    onchange="app.toggleSubtaskComplete('${parentTaskId}', '${subtask.id}')">
+        `;
+        
+        row.innerHTML = `
+            <div class="task-col-title">
+                ${checkbox}
+                <span class="task-title-text">${subtask.title}</span>
+                <span class="subtask-indicator">Subtask</span>
+            </div>
+            <div class="task-col-points">
+                ${pointsDropdown}
+            </div>
+            <div class="task-col-priority">
+                ${priorityDropdown}
+            </div>
+            <div class="task-col-due">${dueDate}</div>
+            <div class="task-col-actions">
+                <button class="btn-secondary" onclick="app.editTask('${subtask.id}')" title="Edit task">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-secondary" onclick="app.deleteTask('${subtask.id}')" title="Delete task">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        
+        return row;
+    }
+
+    SprintTodoApp.prototype.selectFolder = function(folderId) {
+        // Update active folder in sidebar
+        document.querySelectorAll('.folder-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        
+        const selectedFolder = document.querySelector(`[data-folder-id="${folderId}"]`) ||
+                              document.querySelector('.folder-item[data-folder-id="all"]');
+        if (selectedFolder) {
+            selectedFolder.classList.add('active');
+        }
+        
+        // Render tasks for selected folder
+        this.renderTasks(folderId);
+    }
+
 
     SprintTodoApp.prototype.createFolderElement = function(folder) {
         const tasks = this.getParentTasksForFolder(folder.id).filter(task => task.status !== 'done');
@@ -1634,9 +2035,25 @@ function SprintTodoApp() {
 
     // Modal Management
     SprintTodoApp.prototype.openTaskModal = function(taskData) {
+        console.log('openTaskModal called with taskData:', taskData);
         taskData = taskData || {};
         const modal = document.getElementById('task-modal');
         const form = document.getElementById('task-form');
+        
+        if (!modal) {
+            console.error('Task modal not found');
+            return;
+        }
+        
+        if (!form) {
+            console.error('Task form not found');
+            return;
+        }
+        
+        console.log('Modal and form found, proceeding...');
+        
+        // Save current scroll position
+        const scrollY = window.scrollY;
         
         // Reset form
         form.reset();
@@ -1667,6 +2084,11 @@ function SprintTodoApp() {
         } else {
             document.getElementById('modal-title').textContent = 'Create Task';
         }
+        
+        // Restore scroll position after modal opens
+        setTimeout(() => {
+            window.scrollTo(0, scrollY);
+        }, 0);
         
         // Set sprint options
         const sprintSelect = document.getElementById('task-sprint');
@@ -1778,43 +2200,6 @@ function SprintTodoApp() {
         });
     }
 
-    // Data Persistence
-    SprintTodoApp.prototype.saveTask = function() {
-        const taskData = {
-            title: document.getElementById('task-title').value,
-            description: document.getElementById('task-description').value,
-            points: parseInt(document.getElementById('task-points').value),
-            priority: document.getElementById('task-priority').value,
-            dueDate: document.getElementById('task-due-date').value,
-            sprintId: document.getElementById('task-sprint').value || null,
-            recurring: document.getElementById('task-recurring').checked,
-            recurringType: document.getElementById('recurring-type').value || null
-        };
-        
-        // Get folderId from the folder selection dropdown if it exists
-        const folderSelect = document.getElementById('task-folder');
-        if (folderSelect) {
-            taskData.folderId = folderSelect.value || null;
-        }
-        
-        // Get the task ID from the form data attribute
-        const form = document.getElementById('task-form');
-        const taskId = form.dataset.taskId;
-        
-        if (taskId) {
-            // Update existing task
-            this.updateTask(taskId, taskData);
-            this.showNotification('Task updated successfully!');
-        } else {
-            // Create new task
-            this.createTask(taskData);
-            this.showNotification('Task created successfully!');
-        }
-        
-        // Close modal and refresh UI
-        this.closeModals();
-        this.render();
-    }
 
     SprintTodoApp.prototype.saveSprint = function() {
         const sprintData = {
@@ -1950,58 +2335,53 @@ function SprintTodoApp() {
         document.getElementById('inline-task-form-element').reset();
     }
 
-    SprintTodoApp.prototype.closeInlineTaskForm = function() {
-        const form = document.getElementById('inline-task-form');
-        form.style.display = 'none';
-        form.dataset.folderId = '';
-    }
-
-    SprintTodoApp.prototype.saveInlineTask = function() {
-        const folderId = document.getElementById('inline-task-form').dataset.folderId || null;
-        const taskData = {
-            title: document.getElementById('inline-task-title').value,
-            points: parseInt(document.getElementById('inline-task-points').value) || 1,
-            priority: document.getElementById('inline-task-priority').value,
-            dueDate: document.getElementById('inline-task-due-date').value,
-            folderId: folderId
-        };
-        
-        // Create the task
-        this.createTask(taskData);
-        
-        // Close the form
-        this.closeInlineTaskForm();
-        
-        // Refresh the UI
-        this.render();
-        
-        // Show success message
-        this.showNotification('Task created successfully!');
-    }
 
     SprintTodoApp.prototype.createQuickTask = function(inputElement, folderId) {
         const taskTitle = inputElement.value.trim();
+        if (!taskTitle) return;
         
-        if (!taskTitle) {
-            return; // Don't create empty tasks
-        }
+        // Capture scroll position and focused element before any changes
+        const container = document.getElementById('backlog-container');
+        const scrollY = container ? container.scrollTop : window.scrollY;
+        const activeElement = document.activeElement;
         
-        // Create the task with default values
-        const taskData = {
-            title: taskTitle,
-            points: 1, // Default points
-            priority: 'medium', // Default priority
-            folderId: folderId
-        };
+        console.log('createQuickTask: Capturing scroll position:', scrollY);
         
         // Create the task
+        const taskData = {
+            title: taskTitle,
+            points: 1,
+            priority: 'medium',
+            folderId: folderId
+        };
         this.createTask(taskData);
-        
-        // Clear the input field
         inputElement.value = '';
         
-        // Refresh the UI
+        // Store scroll position for restoration
+        this.pendingScrollRestore = { scrollY, activeElement, container };
+        
+        // Use the improved render method that prevents scroll jump
         this.render();
+        
+        // Use requestAnimationFrame for better timing to restore scroll position
+        requestAnimationFrame(() => {
+            if (this.pendingScrollRestore && this.pendingScrollRestore.scrollY > 0) {
+                if (this.pendingScrollRestore.container) {
+                    this.pendingScrollRestore.container.scrollTop = this.pendingScrollRestore.scrollY;
+                    // Fallback to window scroll if container scroll doesn't work
+                    if (this.pendingScrollRestore.container.scrollTop !== this.pendingScrollRestore.scrollY) {
+                        window.scrollTo(0, this.pendingScrollRestore.scrollY);
+                    }
+                } else {
+                    window.scrollTo(0, this.pendingScrollRestore.scrollY);
+                }
+                
+                if (this.pendingScrollRestore.activeElement && this.pendingScrollRestore.activeElement.tagName === 'INPUT') {
+                    this.pendingScrollRestore.activeElement.focus();
+                }
+                this.pendingScrollRestore = null;
+            }
+        });
         
         // Show success message
         this.showNotification('Task created successfully!');
@@ -2367,8 +2747,14 @@ function SprintTodoApp() {
             this.showNotification('Task removed from sprint');
         }
         
-        // Re-render to update the UI
-        this.render();
+        // Refresh the task table if we're in backlog view
+        if (this.currentView === 'backlog') {
+            const activeFolder = document.querySelector('.folder-item.active');
+            if (activeFolder) {
+                const folderId = activeFolder.dataset.folderId || 'all';
+                this.renderTasks(folderId);
+            }
+        }
     }
 
     SprintTodoApp.prototype.updateTaskPriority = function(taskId, priority) {
@@ -2383,8 +2769,14 @@ function SprintTodoApp() {
         // Show notification
         this.showNotification(`Task priority updated to ${priority}`);
         
-        // Re-render to update the UI
-        this.render();
+        // Refresh the task table if we're in backlog view
+        if (this.currentView === 'backlog') {
+            const activeFolder = document.querySelector('.folder-item.active');
+            if (activeFolder) {
+                const folderId = activeFolder.dataset.folderId || 'all';
+                this.renderTasks(folderId);
+            }
+        }
     }
 
     SprintTodoApp.prototype.updateTaskPoints = function(taskId, points) {
@@ -2399,8 +2791,14 @@ function SprintTodoApp() {
         // Show notification
         this.showNotification(`Task points updated to ${points}`);
         
-        // Re-render to update the UI
-        this.render();
+        // Refresh the task table if we're in backlog view
+        if (this.currentView === 'backlog') {
+            const activeFolder = document.querySelector('.folder-item.active');
+            if (activeFolder) {
+                const folderId = activeFolder.dataset.folderId || 'all';
+                this.renderTasks(folderId);
+            }
+        }
     }
 
     SprintTodoApp.prototype.showNotification = function(message) {
@@ -2446,14 +2844,14 @@ function SprintTodoApp() {
         // Save the change
         this.saveData();
         
-        // Update the UI
-        const subtasksContainer = document.getElementById(`subtasks-${taskId}`);
-        console.log('Subtasks container:', subtasksContainer);
-        if (subtasksContainer) {
-            subtasksContainer.classList.toggle('collapsed');
-            console.log('Toggled collapsed class');
+        // Update the UI by re-rendering the task table
+        const activeFolder = document.querySelector('.folder-item.active');
+        if (activeFolder) {
+            const folderId = activeFolder.dataset.folderId || 'all';
+            this.renderTasks(folderId);
         }
         
+        // Update the toggle button icon
         const toggleButton = document.querySelector(`[data-task-id="${taskId}"] .btn-toggle-subtasks i`);
         console.log('Toggle button:', toggleButton);
         if (toggleButton) {
@@ -2462,7 +2860,6 @@ function SprintTodoApp() {
         }
     }
 
-    // Placeholder methods for future implementation
     SprintTodoApp.prototype.editTask = function(taskId) {
         const task = this.getTask(taskId);
         if (task) {
@@ -2472,9 +2869,24 @@ function SprintTodoApp() {
 
     SprintTodoApp.prototype.deleteTask = function(taskId) {
         if (confirm('Are you sure you want to delete this task?')) {
+            // Remove the task from the tasks array
             this.tasks = this.tasks.filter(t => t.id !== taskId);
+            
+            // Also remove any subtasks belonging to this task
+            const subtasksToRemove = this.tasks.filter(t => t.parentTaskId === taskId);
+            this.tasks = this.tasks.filter(t => t.parentTaskId !== taskId);
+            
             this.saveData();
-            this.render();
+            
+            // Refresh the task table if we're in backlog view
+            if (this.currentView === 'backlog') {
+                const activeFolder = document.querySelector('.folder-item.active');
+                if (activeFolder) {
+                    const folderId = activeFolder.dataset.folderId || 'all';
+                    this.renderTasks(folderId);
+                }
+            }
+            
             this.showNotification('Task deleted successfully!');
         }
     }
@@ -2488,7 +2900,18 @@ function SprintTodoApp() {
 
     SprintTodoApp.prototype.deleteSprint = function(sprintId) {
         if (confirm('Are you sure you want to delete this sprint? Tasks will be moved to backlog.')) {
-            this.deleteSprint(sprintId);
+            // Move tasks from this sprint to backlog
+            this.tasks.forEach(task => {
+                if (task.sprintId === sprintId) {
+                    task.sprintId = null;
+                    task.status = 'backlog';
+                }
+            });
+            
+            // Remove the sprint
+            this.sprints = this.sprints.filter(s => s.id !== sprintId);
+            this.saveData();
+            
             this.render();
             this.showNotification('Sprint deleted successfully!');
         }
@@ -2532,55 +2955,83 @@ function SprintTodoApp() {
         const name = prompt('Enter folder name:');
         if (name) {
             this.createFolder({ name });
-            this.render();
             this.showNotification('Folder created successfully!');
         }
     };
-    
-    // Convert all remaining methods to prototype syntax
-    SprintTodoApp.prototype.init = function() {
-        // Load data from localStorage
-        this.loadData();
+
+
+    SprintTodoApp.prototype.closeTaskModal = function() {
+        const modal = document.getElementById('task-modal');
+        modal.style.display = 'none';
+    };
+
+    SprintTodoApp.prototype.saveTask = function(taskData) {
+        const taskId = taskData.id;
         
-        // Set up event listeners
-        this.setupEventListeners();
+        if (taskId) {
+            // Update existing task
+            this.updateTask(taskId, taskData);
+            this.showNotification('Task updated successfully!');
+        } else {
+            // Create new task
+            this.createTask(taskData);
+            this.showNotification('Task created successfully!');
+        }
         
-        // Add event listener for create folder button
-        document.getElementById('create-folder-btn').addEventListener('click', function() {
-            this.showCreateFolderDialog();
-        }.bind(this));
-        
-        // Set up event delegation for dynamic elements
-        this.setupEventDelegation();
-        
-        // Initialize the UI
+        this.closeTaskModal();
         this.render();
+    };
+
+    SprintTodoApp.prototype.openInlineTaskForm = function() {
+        const form = document.getElementById('inline-task-form');
+        form.style.display = 'block';
         
-        // Set up drag and drop
-        this.setupDragAndDrop();
+        // Focus on title input
+        document.getElementById('inline-task-title').focus();
         
-        // Set up backlog drag and drop
-        this.setupBacklogDragAndDrop();
+        // Store current folder ID for task creation
+        const activeFolder = document.querySelector('.folder-item.active');
+        if (activeFolder) {
+            form.dataset.folderId = activeFolder.dataset.folderId || 'all';
+        }
+    };
+
+    SprintTodoApp.prototype.closeInlineTaskForm = function() {
+        const form = document.getElementById('inline-task-form-element');
+        if (form) {
+            form.style.display = 'none';
+            form.reset();
+        }
+    };
+
+    SprintTodoApp.prototype.createInlineTask = function(taskData) {
+        const folderId = taskData.folderId || null;
+        const newTaskData = {
+            title: taskData.title,
+            description: taskData.description || '',
+            points: parseInt(taskData.points) || 1,
+            priority: taskData.priority || 'medium',
+            dueDate: taskData.dueDate || null,
+            folderId: folderId
+        };
         
-        // Set up context menu
-        this.setupContextMenu();
+        this.createTask(newTaskData);
+        this.closeInlineTaskForm();
+        this.showNotification('Task created successfully!');
     };
     
-    // Add all other methods in the same prototype pattern...
-
     SprintTodoApp.prototype.showAddSubtaskDialog = function(parentTaskId) {
         const title = prompt('Enter subtask title:');
         if (title) {
             this.createSubtask(parentTaskId, { title });
-            this.render();
             this.showNotification('Subtask created successfully!');
         }
     };
 
 // Initialize the app when DOM is loaded
-(function() {
+document.addEventListener('DOMContentLoaded', function() {
     window.app = new SprintTodoApp();
-})();
+});
 
 // Add CSS animation for notifications
 const style = document.createElement('style');
