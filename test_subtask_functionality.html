@@ -15,13 +15,13 @@
                 <h1>Sprint Todo App</h1>
             </div>
             <div class="main-nav">
-                <button class="nav-btn active" onclick="switchView('backlog')">Backlog</button>
-                <button class="nav-btn" onclick="switchView('sprints')">Sprints</button>
-                <button class="nav-btn" onclick="switchView('board')">Board</button>
-                <button class="nav-btn" onclick="switchView('analysis')">Analysis</button>
+                <button class="nav-btn active" onclick="window.app.switchView('backlog')">Backlog</button>
+                <button class="nav-btn" onclick="window.app.switchView('sprints')">Sprints</button>
+                <button class="nav-btn" onclick="window.app.switchView('board')">Board</button>
+                <button class="nav-btn" onclick="window.app.switchView('analysis')">Analysis</button>
             </div>
             <div class="user-actions">
-                <button class="btn-primary" onclick="showCreateFolderDialog()">
+                <button class="btn-primary" onclick="window.app.showCreateFolderDialog()">
                     <i class="fas fa-folder-plus"></i> New Folder
                 </button>
             </div>
@@ -35,17 +35,17 @@
                             <h3>Folders</h3>
                         </div>
                         <div class="folder-list">
-                            <div class="folder-item active" data-folder-id="all" onclick="selectFolder('all')">
+                            <div class="folder-item active" data-folder-id="all" onclick="window.app.selectFolder('all')">
                                 <i class="fas fa-inbox"></i>
                                 <span class="folder-name">All Tasks</span>
                                 <span class="folder-count" id="all-count">0</span>
                             </div>
-                            <div class="folder-item" data-folder-id="work" onclick="selectFolder('work')">
+                            <div class="folder-item" data-folder-id="work" onclick="window.app.selectFolder('work')">
                                 <i class="fas fa-briefcase"></i>
                                 <span class="folder-name">Work</span>
                                 <span class="folder-count" id="work-count">0</span>
                             </div>
-                            <div class="folder-item" data-folder-id="personal" onclick="selectFolder('personal')">
+                            <div class="folder-item" data-folder-id="personal" onclick="window.app.selectFolder('personal')">
                                 <i class="fas fa-user"></i>
                                 <span class="folder-name">Personal</span>
                                 <span class="folder-count" id="personal-count">0</span>
@@ -57,7 +57,7 @@
                         <div class="task-header">
                             <h3 id="current-folder-title">All Tasks</h3>
                             <div class="task-actions">
-                                <button class="btn-secondary" onclick="openInlineTaskForm()">
+                                <button class="btn-secondary" onclick="window.app.openInlineTaskForm()">
                                     <i class="fas fa-plus"></i> Quick Add
                                 </button>
                             </div>

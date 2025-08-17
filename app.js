@@ -46,7 +46,9 @@ function SprintTodoApp() {
         // Add event listeners for task creation buttons
         const addTaskBtn = document.getElementById('add-task-btn');
         if (addTaskBtn) {
-            addTaskBtn.addEventListener('click', () => {
+            addTaskBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 console.log('Add Task button clicked');
                 this.openTaskModal();
             });
@@ -54,7 +56,9 @@ function SprintTodoApp() {
         
         const addToBacklogBtn = document.getElementById('add-to-backlog-btn');
         if (addToBacklogBtn) {
-            addToBacklogBtn.addEventListener('click', () => {
+            addToBacklogBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 console.log('Add to Backlog button clicked');
                 this.openTaskModal();
             });
@@ -62,50 +66,28 @@ function SprintTodoApp() {
         
         const addToFolderBtn = document.getElementById('add-task-to-folder-btn');
         if (addToFolderBtn) {
-            addToFolderBtn.addEventListener('click', () => {
+            addToFolderBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 console.log('Add to Folder button clicked');
                 this.openTaskModal();
             });
         }
         
-        // Add event listener for inline task form
-        const inlineTaskForm = document.getElementById('inline-task-form-element');
-        if (inlineTaskForm) {
-            inlineTaskForm.addEventListener('submit', (e) => {
+        // Add event listener for add task to sprint button
+        const addTaskToSprintBtn = document.getElementById('add-task-to-sprint-btn');
+        if (addTaskToSprintBtn) {
+            addTaskToSprintBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                const formData = new FormData(inlineTaskForm);
-                const taskData = {
-                    title: document.getElementById('inline-task-title').value,
-                    points: document.getElementById('inline-task-points').value,
-                    priority: document.getElementById('inline-task-priority').value,
-                    dueDate: document.getElementById('inline-task-due-date').value,
-                    folderId: inlineTaskForm.dataset.folderId || null
-                };
-                this.createInlineTask(taskData);
+                e.stopPropagation();
+                console.log('Add Task to Sprint button clicked');
+                this.openTaskModal();
             });
         }
         
-        // Add event listener for task modal form
-        const taskForm = document.getElementById('task-form');
-        if (taskForm) {
-            taskForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const taskId = taskForm.dataset.taskId;
-                const taskData = {
-                    id: taskId,
-                    title: document.getElementById('task-title').value,
-                    description: document.getElementById('task-description').value,
-                    points: parseInt(document.getElementById('task-points').value) || 1,
-                    priority: document.getElementById('task-priority').value,
-                    dueDate: document.getElementById('task-due-date').value,
-                    sprintId: document.getElementById('task-sprint').value || null,
-                    recurring: document.getElementById('task-recurring').checked,
-                    recurringType: document.getElementById('recurring-type').value,
-                    folderId: taskForm.dataset.folderId || null
-                };
-                this.saveTask(taskData);
-            });
-        }
+        // Inline task form submission is handled in setupEventListeners() to avoid duplication
+        
+        // Task modal form submission is handled in setupEventListeners() to avoid duplication
         
         // Set up event delegation for dynamic elements
         this.setupEventDelegation();
@@ -185,6 +167,18 @@ function SprintTodoApp() {
 
     // Task Management
     SprintTodoApp.prototype.createTask = function(taskData) {
+        // Check if a task with the same title already exists to prevent duplicates
+        const existingTask = this.tasks.find(task =>
+            task.title === taskData.title &&
+            task.folderId === (taskData.folderId || null) &&
+            task.sprintId === (taskData.sprintId || null)
+        );
+        
+        if (existingTask) {
+            this.showNotification('A task with this title already exists in this location.', 'warning');
+            return null;
+        }
+        
         const task = {
             id: Date.now().toString(),
             title: taskData.title,
@@ -924,7 +918,7 @@ function SprintTodoApp() {
             });
         }
         
-        // Task Modal form submission (moved from init method)
+        // Task Modal form submission
         const taskForm = document.getElementById('task-form');
         if (taskForm) {
             taskForm.addEventListener('submit', (e) => {
@@ -2100,6 +2094,14 @@ function SprintTodoApp() {
                 option.textContent = sprint.name;
                 sprintSelect.appendChild(option);
             });
+            
+            // Set the current sprint selection AFTER populating the dropdown
+            if (taskData.id) {
+                const task = this.getTask(taskData.id);
+                if (task) {
+                    sprintSelect.value = task.sprintId || '';
+                }
+            }
         }
         
         // Add folder selection if folderId is provided
@@ -2159,13 +2161,15 @@ function SprintTodoApp() {
         
         // Set sprint options
         const sprintSelect = document.getElementById('email-task-sprint');
-        sprintSelect.innerHTML = '<option value="">No Sprint</option>';
-        this.sprints.forEach(sprint => {
-            const option = document.createElement('option');
-            option.value = sprint.id;
-            option.textContent = sprint.name;
-            sprintSelect.appendChild(option);
-        });
+        if (sprintSelect) {
+            sprintSelect.innerHTML = '<option value="">No Sprint</option>';
+            this.sprints.forEach(sprint => {
+                const option = document.createElement('option');
+                option.value = sprint.id;
+                option.textContent = sprint.name;
+                sprintSelect.appendChild(option);
+            });
+        }
         
         modal.classList.add('active');
     }
@@ -2755,6 +2759,11 @@ function SprintTodoApp() {
                 this.renderTasks(folderId);
             }
         }
+        
+        // Refresh the sprint board if we're in board view
+        if (this.currentView === 'board') {
+            this.renderSprintBoard();
+        }
     }
 
     SprintTodoApp.prototype.updateTaskPriority = function(taskId, priority) {
@@ -2962,7 +2971,7 @@ function SprintTodoApp() {
 
     SprintTodoApp.prototype.closeTaskModal = function() {
         const modal = document.getElementById('task-modal');
-        modal.style.display = 'none';
+        modal.classList.remove('active');
     };
 
     SprintTodoApp.prototype.saveTask = function(taskData) {
@@ -2972,14 +2981,44 @@ function SprintTodoApp() {
             // Update existing task
             this.updateTask(taskId, taskData);
             this.showNotification('Task updated successfully!');
+            
+            // Refresh the current view
+            if (this.currentView === 'backlog') {
+                const activeFolder = document.querySelector('.folder-item.active');
+                if (activeFolder) {
+                    const folderId = activeFolder.dataset.folderId || 'all';
+                    this.renderTasks(folderId);
+                }
+            } else if (this.currentView === 'board') {
+                this.renderSprintBoard();
+            }
         } else {
             // Create new task
             this.createTask(taskData);
             this.showNotification('Task created successfully!');
+            
+            // Refresh the current view
+            if (this.currentView === 'backlog') {
+                const activeFolder = document.querySelector('.folder-item.active');
+                if (activeFolder) {
+                    const folderId = activeFolder.dataset.folderId || 'all';
+                    this.renderTasks(folderId);
+                }
+            }
         }
         
         this.closeTaskModal();
-        this.render();
+        // Reset the form to prevent duplicate submissions
+        const taskForm = document.getElementById('task-form');
+        if (taskForm) {
+            taskForm.reset();
+            taskForm.dataset.taskId = '';
+        }
+        
+        // Only re-render if not already in the current view to avoid unnecessary refreshes
+        if (this.currentView === 'sprints' || this.currentView === 'analysis') {
+            this.render();
+        }
     };
 
     SprintTodoApp.prototype.openInlineTaskForm = function() {
