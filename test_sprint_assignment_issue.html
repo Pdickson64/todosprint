@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprint Assignment Issue Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Sprint Assignment Issue Test</h1>
+        
+        <div class="test-info">
+            <h2>Test Scenario</h2>
+            <p>This test reproduces the issue where tasks assigned to sprints from the backlog don't appear on the sprint board.</p>
+            <ol>
+                <li>Create a sprint and some tasks in the backlog</li>
+                <li>Assign tasks to the sprint from the backlog view</li>
+                <li>Navigate to the sprint board</li>
+                <li>Verify that tasks appear on the sprint board</li>
+            </ol>
+        </div>
+
+        <div class="test-controls">
+            <button id="setup-test-btn" class="btn-primary">Setup Test Data</button>
+            <button id="assign-tasks-btn" class="btn-primary" disabled>Assign Tasks to Sprint</button>
+            <button id="test-board-btn" class="btn-primary" disabled>Test Sprint Board</button>
+            <button id="reset-test-btn" class="btn-secondary">Reset Test</button>
+        </div>
+
+        <div id="test-status" class="test-status">
+            <p>Status: <span id="status-text">Ready to setup test</span></p>
+        </div>
+
+        <div class="app-container">
+            <!-- Navigation -->
+            <nav class="nav">
+                <button class="nav-btn active" data-view="backlog">
+                    <i class="fas fa-list"></i> Backlog
+                </button>
+                <button class="nav-btn" data-view="sprints">
+                    <i class="fas fa-calendar-alt"></i> Sprints
+                </button>
+                <button class="nav-btn" data-view="board">
+                    <i class="fas fa-columns"></i> Board
+                </button>
+                <button class="nav-btn" data-view="analysis">
+                    <i class="fas fa-chart-bar"></i> Analysis
+                </button>
+            </nav>
+
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Backlog View -->
+                <div id="backlog-view" class="view active">
+                    <div class="backlog-container">
+                        <div class="backlog-header">
+                            <h2>Task Backlog</h2>
+                            <div class="backlog-actions">
+                                <button id="add-task-btn" class="btn-primary">
+                                    <i class="fas fa-plus"></i> Add Task
+                                </button>
+                                <button id="add-to-backlog-btn" class="btn-secondary">
+                                    <i class="fas fa-plus"></i> Add to Backlog
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="backlog-content">
+                            <div class="folder-sidebar">
+                                <div class="folder-list">
+                                    <div class="folder-item active" data-folder-id="all">
+                                        <div class="folder-header" onclick="app.selectFolder('all')">
+                                            <i class="fas fa-tasks"></i>
+                                            <span>All Tasks</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="task-table-container">
+                                <h3 id="current-folder-title">All Tasks</h3>
+                                <div id="task-table-body"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sprints View -->
+                <div id="sprints-view" class="view">
+                    <div class="sprints-header">
+                        <h2>Sprints</h2>
+                        <button id="create-sprint-btn" class="btn-primary">
+                            <i class="fas fa-plus"></i> Create Sprint
+                        </button>
+                    </div>
+                    <div id="sprints-container"></div>
+                </div>
+
+                <!-- Board View -->
+                <div id="board-view" class="view">
+                    <div class="board-header">
+                        <h2>Sprint Board</h2>
+                        <div class="board-controls">
+                            <select id="sprint-selector">
+                                <option value="">Select Sprint</option>
+                            </select>
+                            <button id="manage-statuses-btn" class="btn-secondary">
+                                <i class="fas fa-cog"></i> Manage Statuses
+                            </button>
+                        </div>
+                    </div>
+                    <div id="board-container" class="board-container"></div>
+                </div>
+
+                <!-- Analysis View -->
+                <div id="analysis-view" class="view">
+                    <div class="analysis-header">
+                        <h2>Sprint Analysis</h2>
+                        <div class="analysis-controls">
+                            <select id="analysis-sprint-selector">
+                                <option value="">Select Sprint</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="charts-container">
+                        <div class="chart">
+                            <canvas id="burnup-chart"></canvas>
+                        </div>
+                        <div class="chart">
+                            <canvas id="burndown-chart"></canvas>
+                        </div>
+                        <div class="chart">
+                            <canvas id="velocity-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Modal -->
+    <div id="task-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Create Task</h3>
+                <button class="close-btn" onclick="app.closeTaskModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="task-form">
+                <div class="form-group">
+                    <label for="task-title">Task Title</label>
+                    <input type="text" id="task-title" required>
+                </div>
+                <div class="form-group">
+                    <label for="task-description">Description</label>
+                    <textarea id="task-description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="task-points">Story Points</label>
+                    <select id="task-points">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="5">5</option>
+                        <option value="8">8</option>
+                        <option value="13">13</option>
+                        <option value="20">20</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="task-priority">Priority</label>
+                    <select id="task-priority">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="task-due-date">Due Date</label>
+                    <input type="date" id="task-due-date">
+                </div>
+                <div class="form-group">
+                    <label for="task-sprint">Sprint</label>
+                    <select id="task-sprint">
+                        <option value="">No Sprint</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="task-recurring"> Recurring Task
+                    </label>
+                </div>
+                <div id="recurring-options" class="form-group" style="display: none;">
+                    <label for="recurring-type">Recurring Type</label>
+                    <select id="recurring-type">
+                        <option value="completion">On Completion</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="biweekly">Bi-weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Save Task</button>
+                    <button type="button" class="btn-secondary" onclick="app.closeTaskModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sprint Modal -->
+    <div id="sprint-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="sprint-modal-title">Create Sprint</h3>
+                <button class="close-btn" onclick="app.closeModals()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="sprint-form">
+                <div class="form-group">
+                    <label for="sprint-name">Sprint Name</label>
+                    <input type="text" id="sprint-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="sprint-start-date">Start Date</label>
+                    <input type="date" id="sprint-start-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="sprint-end-date">End Date</label>
+                    <input type="date" id="sprint-end-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="sprint-duration">Duration (days)</label>
+                    <input type="number" id="sprint-duration" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Save Sprint</button>
+                    <button type="button" class="btn-secondary" onclick="app.closeModals()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Status Modal -->
+    <div id="status-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Manage Board Statuses</h3>
+                <button class="close-btn" onclick="app.closeStatusModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="status-management">
+                <div class="status-actions">
+                    <button id="add-status-btn" class="btn-primary">
+                        <i class="fas fa-plus"></i> Add Status
+                    </button>
+                    <button id="reset-statuses-btn" class="btn-secondary">
+                        <i class="fas fa-undo"></i> Reset to Default
+                    </button>
+                </div>
+                <div id="status-list"></div>
+                <div id="add-status-form" class="form-group" style="display: none;">
+                    <input type="text" id="new-status-name" placeholder="Status name">
+                    <input type="number" id="new-status-order" placeholder="Order" min="1">
+                    <div class="form-actions">
+                        <button type="button" class="btn-primary" onclick="app.addStatus()">Add</button>
+                        <button type="button" class="btn-secondary" onclick="app.hideAddStatusForm()">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Test functions
+        let testApp;
+        let testSprint;
+        let testTasks = [];
+
+        function updateStatus(message, isError = false) {
+            const statusText = document.getElementById('status-text');
+            statusText.textContent = message;
+            statusText.className = isError ? 'error' : 'success';
+        }
+
+        function setupTestData() {
+            updateStatus('Setting up test data...');
+            
+            // Create test sprint
+            testSprint = testApp.createSprint({
+                name: 'Test Sprint',
+                startDate: '2025-01-01',
+                endDate: '2025-01-14',
+                duration: 14
+            });
+
+            // Update sprint status to active
+            testApp.updateSprint(testSprint.id, { status: 'active' });
+
+            // Create test tasks in backlog (no sprint assignment)
+            testTasks = [
+                testApp.createTask({
+                    title: 'Backlog Task 1',
+                    description: 'First task in backlog'
+                }),
+                testApp.createTask({
+                    title: 'Backlog Task 2',
+                    description: 'Second task in backlog'
+                }),
+                testApp.createTask({
+                    title: 'Backlog Task 3',
+                    description: 'Third task in backlog'
+                })
+            ];
+
+            // Update sprint selectors
+            testApp.renderSprintSelectors();
+
+            updateStatus('Test data setup complete. Ready to assign tasks to sprint.');
+            document.getElementById('assign-tasks-btn').disabled = false;
+            
+            console.log('Test data created:', {
+                sprint: testSprint,
+                tasks: testTasks
+            });
+        }
+
+        function assignTasksToSprint() {
+            updateStatus('Assigning tasks to sprint...');
+            
+            // Assign each task to the sprint using the dropdown in the backlog
+            testTasks.forEach((task, index) => {
+                console.log(`Assigning task ${index + 1} to sprint...`);
+                testApp.assignTaskToSprint(task.id, testSprint.id);
+            });
+
+            // Check if tasks are now assigned to the sprint
+            const tasksInSprint = testApp.getTasksBySprint(testSprint.id);
+            console.log('Tasks in sprint after assignment:', tasksInSprint);
+
+            updateStatus(`Assigned ${testTasks.length} tasks to sprint. Tasks in sprint: ${tasksInSprint.length}`);
+            document.getElementById('test-board-btn').disabled = false;
+        }
+
+        function testSprintBoard() {
+            updateStatus('Testing sprint board...');
+            
+            // Navigate to the sprint board
+            testApp.switchView('board');
+            
+            // Select the sprint in the dropdown
+            const sprintSelector = document.getElementById('sprint-selector');
+            sprintSelector.value = testSprint.id;
+            
+            // Trigger the change event to update the board
+            const event = new Event('change');
+            sprintSelector.dispatchEvent(event);
+            
+            // Check if tasks are displayed on the board
+            setTimeout(() => {
+                const boardContainer = document.getElementById('board-container');
+                const taskElements = boardContainer.querySelectorAll('.task-item');
+                
+                console.log('Board container content:', boardContainer.innerHTML);
+                console.log('Task elements found:', taskElements.length);
+                
+                if (taskElements.length >= 3) {
+                    updateStatus('✓ SUCCESS: All 3 tasks are displayed on the sprint board!');
+                } else {
+                    updateStatus(`✗ FAILURE: Expected 3 tasks, found ${taskElements.length}`, true);
+                    console.log('Board HTML:', boardContainer.innerHTML);
+                }
+            }, 100);
+        }
+
+        function resetTest() {
+            updateStatus('Resetting test...');
+            
+            // Clear all data
+            testApp.tasks = [];
+            testApp.sprints = [];
+            testApp.folders = [];
+            testApp.boardStatuses = [];
+            
+            // Clear localStorage
+            localStorage.removeItem('sprint-todo-tasks');
+            localStorage.removeItem('sprint-todo-sprints');
+            localStorage.removeItem('sprint-todo-folders');
+            localStorage.removeItem('sprint-todo-board-statuses');
+            localStorage.removeItem('sprint-todo-folder-states');
+            
+            // Re-render the app
+            testApp.render();
+            
+            updateStatus('Test reset complete. Ready to setup new test.');
+            document.getElementById('assign-tasks-btn').disabled = true;
+            document.getElementById('test-board-btn').disabled = true;
+        }
+
+        // Initialize test when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            testApp = new SprintTodoApp();
+            
+            // Setup test buttons
+            document.getElementById('setup-test-btn').addEventListener('click', setupTestData);
+            document.getElementById('assign-tasks-btn').addEventListener('click', assignTasksToSprint);
+            document.getElementById('test-board-btn').addEventListener('click', testSprintBoard);
+            document.getElementById('reset-test-btn').addEventListener('click', resetTest);
+            
+            updateStatus('Test environment initialized. Click "Setup Test Data" to begin.');
+        });
+    </script>
+</body>
+</html>

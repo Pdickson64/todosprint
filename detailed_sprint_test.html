@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detailed Sprint Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Detailed Sprint Test</h1>
+        
+        <div class="test-section">
+            <h2>Test Steps</h2>
+            <div id="test-steps"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Current View</h2>
+            <div id="current-view"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Sprint Board</h2>
+            <div id="sprint-board"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Task Data</h2>
+            <div id="task-info"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Sprint Data</h2>
+            <div id="sprint-info"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const app = window.app;
+            
+            function addStep(message, success = true) {
+                const stepsDiv = document.getElementById('test-steps');
+                const stepClass = success ? 'success' : 'error';
+                stepsDiv.innerHTML += `<div class="step ${stepClass}">${message}</div>`;
+                console.log(message);
+            }
+            
+            function updateCurrentView() {
+                const viewDiv = document.getElementById('current-view');
+                viewDiv.innerHTML = `
+                    <h3>Current View: ${app.currentView}</h3>
+                    <p>Current Sprint: ${app.currentSprint ? app.currentSprint.name : 'None'}</p>
+                    <p>Sprint Selector: ${document.getElementById('sprint-selector')?.value || 'None'}</p>
+                `;
+            }
+            
+            function updateSprintBoard() {
+                const boardDiv = document.getElementById('sprint-board');
+                const sprintId = app.currentSprint ? app.currentSprint.id : 
+                    document.getElementById('sprint-selector')?.value;
+                
+                if (sprintId) {
+                    const sprint = app.getSprint(sprintId);
+                    const tasks = app.getFlatTasksForSprintBoard(sprintId);
+                    
+                    boardDiv.innerHTML = `
+                        <h3>Sprint: ${sprint ? sprint.name : 'Unknown'}</h3>
+                        <p>Total tasks: ${tasks.length}</p>
+                        <div class="board-columns">
+                            ${app.getBoardStatuses().map(status => {
+                                const statusTasks = tasks.filter(task => task.status === status.id);
+                                return `
+                                    <div class="board-column">
+                                        <div class="column-header">${status.name}</div>
+                                        <div class="column-content">
+                                            ${statusTasks.map(task => `
+                                                <div class="task-item">
+                                                    <div class="task-title">${task.title}</div>
+                                                    <div class="task-meta">
+                                                        Points: ${task.points}, Status: ${task.status}
+                                                    </div>
+                                                </div>
+                                            `).join('') || '<div class="empty-state">No tasks</div>'}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                } else {
+                    boardDiv.innerHTML = '<p>No sprint selected</p>';
+                }
+            }
+            
+            function updateTaskInfo() {
+                const taskDiv = document.getElementById('task-info');
+                const allTasks = app.tasks;
+                
+                taskDiv.innerHTML = `
+                    <h3>All Tasks (${allTasks.length})</h3>
+                    ${allTasks.map(task => `
+                        <div class="task-item">
+                            <div class="task-title">${task.title}</div>
+                            <div class="task-meta">
+                                ID: ${task.id}, Sprint: ${task.sprintId || 'None'}, 
+                                Status: ${task.status}, Folder: ${task.folderId || 'None'}
+                            </div>
+                        </div>
+                    `).join('') || '<p>No tasks found</p>'}
+                `;
+            }
+            
+            function updateSprintInfo() {
+                const sprintDiv = document.getElementById('sprint-info');
+                const allSprints = app.sprints;
+                
+                sprintDiv.innerHTML = `
+                    <h3>All Sprints (${allSprints.length})</h3>
+                    ${allSprints.map(sprint => {
+                        const tasks = app.getTasksBySprint(sprint.id);
+                        return `
+                            <div class="sprint-item">
+                                <div class="sprint-title">${sprint.name}</div>
+                                <div class="sprint-meta">
+                                    ID: ${sprint.id}, Status: ${sprint.status}, 
+                                    Tasks: ${tasks.length}
+                                </div>
+                                <div class="sprint-tasks">
+                                    ${tasks.map(task => `
+                                        <div class="task-item">
+                                            <div class="task-title">${task.title}</div>
+                                            <div class="task-meta">
+                                                Status: ${task.status}, Points: ${task.points}
+                                            </div>
+                                        </div>
+                                    `).join('') || '<p>No tasks in this sprint</p>'}
+                                </div>
+                            </div>
+                        `;
+                    }).join('') || '<p>No sprints found</p>'}
+                `;
+            }
+            
+            // Run the test
+            addStep('=== Starting Detailed Sprint Test ===');
+            
+            // Clear any existing data
+            app.tasks = [];
+            app.sprints = [];
+            app.saveData();
+            
+            // Step 1: Create a test sprint
+            addStep('Step 1: Creating test sprint...');
+            const sprint = app.createSprint({
+                name: 'Test Sprint 1',
+                startDate: '2025-01-01',
+                endDate: '2025-01-14',
+                duration: 14
+            });
+            addStep(`✓ Created sprint: ${sprint.name} (ID: ${sprint.id})`);
+            
+            // Step 2: Create a test task
+            addStep('Step 2: Creating test task...');
+            const task = app.createTask({
+                title: 'Test Task for Sprint',
+                description: 'This task should appear on the sprint board',
+                points: 3,
+                priority: 'medium'
+            });
+            addStep(`✓ Created task: ${task.title} (ID: ${task.id})`);
+            
+            // Update displays
+            updateCurrentView();
+            updateTaskInfo();
+            updateSprintInfo();
+            updateSprintBoard();
+            
+            // Step 3: Check initial state
+            addStep('Step 3: Checking initial state...');
+            const initialSprintTasks = app.getTasksBySprint(sprint.id);
+            addStep(`Tasks in sprint initially: ${initialSprintTasks.length}`);
+            
+            // Step 4: Switch to board view
+            addStep('Step 4: Switching to board view...');
+            app.switchView('board');
+            updateCurrentView();
+            updateSprintBoard();
+            
+            // Step 5: Check if task appears on board
+            addStep('Step 5: Checking if task appears on board...');
+            const boardSprintId = app.currentSprint ? app.currentSprint.id : 
+                document.getElementById('sprint-selector')?.value;
+            
+            if (boardSprintId === sprint.id) {
+                addStep('✓ Correct sprint is selected on board');
+            } else {
+                addStep('✗ Wrong sprint selected on board', false);
+            }
+            
+            // Step 6: Assign task to sprint
+            addStep('Step 6: Assigning task to sprint...');
+            app.assignTaskToSprint(task.id, sprint.id);
+            addStep(`✓ Assigned task ${task.id} to sprint ${sprint.id}`);
+            
+            // Update displays
+            updateCurrentView();
+            updateTaskInfo();
+            updateSprintInfo();
+            updateSprintBoard();
+            
+            // Step 7: Check state after assignment
+            addStep('Step 7: Checking state after assignment...');
+            const afterSprintTasks = app.getTasksBySprint(sprint.id);
+            addStep(`Tasks in sprint after assignment: ${afterSprintTasks.length}`);
+            
+            if (afterSprintTasks.length > 0) {
+                addStep(`✓ Task found in sprint: ${afterSprintTasks[0].title}`);
+            } else {
+                addStep('✗ Task NOT found in sprint', false);
+            }
+            
+            // Step 8: Check flat tasks for sprint board
+            addStep('Step 8: Checking flat tasks for sprint board...');
+            const flatTasks = app.getFlatTasksForSprintBoard(sprint.id);
+            addStep(`Flat tasks for sprint board: ${flatTasks.length}`);
+            
+            if (flatTasks.length > 0) {
+                addStep(`✓ Task found in flat list: ${flatTasks[0].title}`);
+            } else {
+                addStep('✗ Task NOT found in flat list', false);
+            }
+            
+            // Step 9: Check if task appears on board
+            addStep('Step 9: Checking if task appears on board...');
+            const boardTasks = app.getFlatTasksForSprintBoard(boardSprintId);
+            addStep(`Tasks on board: ${boardTasks.length}`);
+            
+            if (boardTasks.length > 0) {
+                addStep(`✓ Task found on board: ${boardTasks[0].title}`);
+            } else {
+                addStep('✗ Task NOT found on board', false);
+            }
+            
+            // Step 10: Check individual task status
+            addStep('Step 10: Checking individual task status...');
+            const individualTask = app.getTask(task.id);
+            if (individualTask) {
+                addStep(`✓ Task found: ${individualTask.title}`);
+                addStep(`  - Sprint ID: ${individualTask.sprintId}`);
+                addStep(`  - Status: ${individualTask.status}`);
+                addStep(`  - Should appear on board: ${individualTask.sprintId === boardSprintId}`);
+            } else {
+                addStep('✗ Task NOT found', false);
+            }
+            
+            // Step 11: Check board rendering details
+            addStep('Step 11: Checking board rendering details...');
+            const boardContainer = document.getElementById('board-container');
+            addStep(`Board container innerHTML: ${boardContainer.innerHTML.substring(0, 200)}...`);
+            
+            const columns = boardContainer.querySelectorAll('.board-column');
+            addStep(`Number of columns: ${columns.length}`);
+            
+            columns.forEach((column, index) => {
+                const header = column.querySelector('.column-header');
+                const content = column.querySelector('.column-content');
+                addStep(`Column ${index + 1}: ${header.textContent}, Tasks: ${content.children.length}`);
+            });
+            
+            addStep('=== Test Complete ===');
+        });
+    </script>
+</body>
+</html>

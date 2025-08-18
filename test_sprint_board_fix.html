@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprint Board Fix Test</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>Sprint Todo App - Sprint Board Fix Test</h1>
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="testSprintBoardFix()">
+                    <i class="fas fa-play"></i> Test Sprint Board Fix
+                </button>
+                <button class="btn btn-secondary" onclick="clearConsole()">
+                    <i class="fas fa-broom"></i> Clear Console
+                </button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="sidebar-section">
+                    <h3>Navigation</h3>
+                    <nav>
+                        <button class="nav-btn" onclick="showBacklog()">
+                            <i class="fas fa-list"></i> Backlog
+                        </button>
+                        <button class="nav-btn" onclick="showSprints()">
+                            <i class="fas fa-flag"></i> Sprints
+                        </button>
+                        <button class="nav-btn" onclick="showBoard()">
+                            <i class="fas fa-columns"></i> Sprint Board
+                        </button>
+                        <button class="nav-btn" onclick="showAnalysis()">
+                            <i class="fas fa-chart-bar"></i> Analysis
+                        </button>
+                    </nav>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>Test Data</h3>
+                    <button class="btn btn-secondary" onclick="createTestData()">
+                        <i class="fas fa-plus"></i> Create Test Data
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearTestData()">
+                        <i class="fas fa-trash"></i> Clear Test Data
+                    </button>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <div id="backlog-view" class="view">
+                    <div class="view-header">
+                        <h2>Backlog</h2>
+                        <div class="view-actions">
+                            <button class="btn btn-primary" onclick="app.openTaskModal()">
+                                <i class="fas fa-plus"></i> Add Task
+                            </button>
+                        </div>
+                    </div>
+                    <div id="task-table-container"></div>
+                </div>
+
+                <div id="sprints-view" class="view" style="display: none;">
+                    <div class="view-header">
+                        <h2>Sprints</h2>
+                        <div class="view-actions">
+                            <button class="btn btn-primary" onclick="app.openSprintModal()">
+                                <i class="fas fa-plus"></i> Create Sprint
+                            </button>
+                        </div>
+                    </div>
+                    <div id="sprints-container"></div>
+                </div>
+
+                <div id="board-view" class="view" style="display: none;">
+                    <div class="view-header">
+                        <h2>Sprint Board</h2>
+                        <div class="view-actions">
+                            <select id="sprint-selector" class="form-select">
+                                <option value="">Select Sprint</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="sprint-board"></div>
+                </div>
+
+                <div id="analysis-view" class="view" style="display: none;">
+                    <div class="view-header">
+                        <h2>Analysis</h2>
+                        <div class="view-actions">
+                            <select id="analysis-sprint-selector" class="form-select">
+                                <option value="">Select Sprint</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="analysis-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Modal -->
+    <div id="task-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="task-modal-title">Create Task</h3>
+                <button class="close-btn" onclick="app.closeTaskModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="task-form">
+                <div class="form-group">
+                    <label for="task-title">Title *</label>
+                    <input type="text" id="task-title" required>
+                </div>
+                <div class="form-group">
+                    <label for="task-description">Description</label>
+                    <textarea id="task-description" rows="3"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="task-points">Points</label>
+                        <input type="number" id="task-points" min="1" value="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="task-priority">Priority</label>
+                        <select id="task-priority">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="task-due-date">Due Date</label>
+                        <input type="date" id="task-due-date">
+                    </div>
+                    <div class="form-group">
+                        <label for="task-sprint">Sprint</label>
+                        <select id="task-sprint">
+                            <option value="">No Sprint</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Task</button>
+                    <button type="button" class="btn btn-secondary" onclick="app.closeTaskModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sprint Modal -->
+    <div id="sprint-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="sprint-modal-title">Create Sprint</h3>
+                <button class="close-btn" onclick="app.closeSprintModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="sprint-form">
+                <div class="form-group">
+                    <label for="sprint-name">Sprint Name *</label>
+                    <input type="text" id="sprint-name" required>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="sprint-start-date">Start Date *</label>
+                        <input type="date" id="sprint-start-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="sprint-end-date">End Date *</label>
+                        <input type="date" id="sprint-end-date" required>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Sprint</button>
+                    <button type="button" class="btn btn-secondary" onclick="app.closeSprintModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="context-menu" class="context-menu">
+        <div class="context-menu-item" onclick="app.assignToSprint()">
+            <i class="fas fa-flag"></i> Assign to Sprint
+        </div>
+        <div class="context-menu-item" onclick="app.editTaskFromMenu()">
+            <i class="fas fa-edit"></i> Edit Task
+        </div>
+        <div class="context-menu-item" onclick="app.deleteTaskFromMenu()">
+            <i class="fas fa-trash"></i> Delete Task
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Test functions
+        function testSprintBoardFix() {
+            console.log('=== Testing Sprint Board Fix ===');
+            
+            // Create test data if needed
+            if (app.sprints.length === 0) {
+                console.log('No sprints found, creating test sprint...');
+                createTestData();
+            }
+            
+            if (app.tasks.length === 0) {
+                console.log('No tasks found, creating test tasks...');
+                createTestTasks();
+            }
+            
+            // Test 1: Check if sprints are created
+            console.log('Test 1: Sprints created:', app.sprints.length);
+            if (app.sprints.length > 0) {
+                console.log('✓ Sprints found:', app.sprints.map(s => s.name));
+            } else {
+                console.log('✗ No sprints found');
+            }
+            
+            // Test 2: Check if tasks are created
+            console.log('Test 2: Tasks created:', app.tasks.length);
+            if (app.tasks.length > 0) {
+                console.log('✓ Tasks found:', app.tasks.map(t => t.title));
+            } else {
+                console.log('✗ No tasks found');
+            }
+            
+            // Test 3: Check if tasks are assigned to sprints
+            const tasksWithSprints = app.tasks.filter(t => t.sprintId);
+            console.log('Test 3: Tasks with sprint assignments:', tasksWithSprints.length);
+            if (tasksWithSprints.length > 0) {
+                console.log('✓ Tasks with sprints:', tasksWithSprints.map(t => ({
+                    title: t.title,
+                    sprint: app.getSprint(t.sprintId)?.name
+                })));
+            } else {
+                console.log('✗ No tasks with sprint assignments');
+            }
+            
+            // Test 4: Check if sprint board renders
+            if (app.sprints.length > 0) {
+                const testSprint = app.sprints[0];
+                console.log('Test 4: Testing sprint board rendering for:', testSprint.name);
+                
+                // Set current sprint
+                app.currentSprint = testSprint;
+                document.getElementById('sprint-selector').value = testSprint.id;
+                
+                // Switch to board view
+                app.switchView('board');
+                
+                // Render sprint board
+                app.renderSprintBoard();
+                
+                // Check if board container has content
+                setTimeout(() => {
+                    const boardContainer = document.getElementById('sprint-board');
+                    const hasContent = boardContainer.children.length > 0;
+                    console.log('✓ Sprint board rendered:', hasContent);
+                    
+                    if (hasContent) {
+                        const tasks = app.getFlatTasksForSprintBoard(testSprint.id);
+                        console.log('✓ Tasks found in sprint board:', tasks.length);
+                        
+                        if (tasks.length > 0) {
+                            console.log('✓ Task details:', tasks.map(t => ({
+                                title: t.title,
+                                status: t.status,
+                                sprintId: t.sprintId
+                            })));
+                        }
+                    }
+                }, 200);
+            }
+            
+            console.log('=== Test Complete ===');
+        }
+        
+        function createTestData() {
+            console.log('Creating test data...');
+            
+            // Create test sprint
+            const sprint = app.createSprint({
+                name: 'Test Sprint 1',
+                startDate: new Date().toISOString().split('T')[0],
+                endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            });
+            
+            // Set sprint as active
+            app.updateSprint(sprint.id, { status: 'active' });
+            
+            console.log('✓ Test sprint created:', sprint.name);
+        }
+        
+        function createTestTasks() {
+            console.log('Creating test tasks...');
+            
+            // Create test tasks
+            const task1 = app.createTask({
+                title: 'Test Task 1',
+                description: 'This is a test task for sprint board',
+                points: 5,
+                priority: 'high',
+                sprintId: app.sprints[0].id,
+                status: 'todo'
+            });
+            
+            const task2 = app.createTask({
+                title: 'Test Task 2',
+                description: 'Another test task for sprint board',
+                points: 3,
+                priority: 'medium',
+                sprintId: app.sprints[0].id,
+                status: 'inprogress'
+            });
+            
+            const task3 = app.createTask({
+                title: 'Test Task 3',
+                description: 'Third test task for sprint board',
+                points: 2,
+                priority: 'low',
+                sprintId: app.sprints[0].id,
+                status: 'review'
+            });
+            
+            console.log('✓ Test tasks created:', [task1, task2, task3].map(t => t.title));
+        }
+        
+        function clearTestData() {
+            if (confirm('Are you sure you want to clear all test data?')) {
+                app.resetAllData();
+                console.log('✓ Test data cleared');
+            }
+        }
+        
+        function clearConsole() {
+            console.clear();
+            console.log('Console cleared');
+        }
+        
+        function showBacklog() {
+            app.switchView('backlog');
+        }
+        
+        function showSprints() {
+            app.switchView('sprints');
+        }
+        
+        function showBoard() {
+            app.switchView('board');
+        }
+        
+        function showAnalysis() {
+            app.switchView('analysis');
+        }
+        
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            window.app = new SprintTodoApp();
+            console.log('Sprint Todo App initialized');
+            console.log('Click "Test Sprint Board Fix" to test the sprint board functionality');
+        });
+    </script>
+</body>
+</html>

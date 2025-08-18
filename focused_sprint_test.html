@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focused Sprint Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>Focused Sprint Board Test</h1>
+        </header>
+
+        <div class="main-content">
+            <div class="test-section">
+                <h3>Step 1: Create Sprint</h3>
+                <button id="create-sprint" class="btn btn-primary">Create Test Sprint</button>
+                <div id="sprint-info" class="info-box"></div>
+            </div>
+
+            <div class="test-section">
+                <h3>Step 2: Create Tasks</h3>
+                <button id="create-tasks" class="btn btn-primary">Create Test Tasks</button>
+                <div id="tasks-info" class="info-box"></div>
+            </div>
+
+            <div class="test-section">
+                <h3>Step 3: Assign Tasks to Sprint</h3>
+                <button id="assign-tasks" class="btn btn-primary">Assign All Tasks to Sprint</button>
+                <div id="assignment-info" class="info-box"></div>
+            </div>
+
+            <div class="test-section">
+                <h3>Step 4: View Sprint Board</h3>
+                <select id="sprint-select">
+                    <option value="">Select Sprint</option>
+                </select>
+                <button id="view-board" class="btn btn-primary">View Sprint Board</button>
+                <div id="board-info" class="info-box"></div>
+                <div id="sprint-board-display" class="sprint-board"></div>
+            </div>
+
+            <div class="test-section">
+                <h3>Step 5: Verify Data</h3>
+                <button id="verify-data" class="btn btn-info">Verify All Data</button>
+                <div id="verification-info" class="info-box"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const app = window.app;
+            
+            const createSprintBtn = document.getElementById('create-sprint');
+            const createTasksBtn = document.getElementById('create-tasks');
+            const assignTasksBtn = document.getElementById('assign-tasks');
+            const viewBoardBtn = document.getElementById('view-board');
+            const verifyDataBtn = document.getElementById('verify-data');
+            const sprintSelect = document.getElementById('sprint-select');
+            
+            const sprintInfo = document.getElementById('sprint-info');
+            const tasksInfo = document.getElementById('tasks-info');
+            const assignmentInfo = document.getElementById('assignment-info');
+            const boardInfo = document.getElementById('board-info');
+            const verificationInfo = document.getElementById('verification-info');
+            const sprintBoardDisplay = document.getElementById('sprint-board-display');
+
+            function updateInfo(element, data) {
+                element.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            }
+
+            function createTestSprint() {
+                const sprint = app.createSprint({
+                    name: 'Test Sprint for Debug',
+                    startDate: '2025-08-01',
+                    endDate: '2025-08-14',
+                    duration: 14
+                });
+                
+                updateInfo(sprintInfo, {
+                    sprintCreated: sprint,
+                    allSprints: app.sprints,
+                    currentSprint: app.currentSprint
+                });
+                
+                updateSprintSelector();
+                app.showNotification('Sprint created successfully!');
+            }
+
+            function createTestTasks() {
+                const tasks = [
+                    { title: 'Debug Task 1', description: 'First debug task', points: 5 },
+                    { title: 'Debug Task 2', description: 'Second debug task', points: 3 },
+                    { title: 'Debug Task 3', description: 'Third debug task', points: 8 }
+                ];
+
+                const createdTasks = tasks.map(taskData => app.createTask(taskData));
+                
+                updateInfo(tasksInfo, {
+                    tasksCreated: createdTasks,
+                    allTasks: app.tasks,
+                    tasksWithSprint: app.tasks.filter(t => t.sprintId),
+                    tasksWithoutSprint: app.tasks.filter(t => !t.sprintId)
+                });
+                
+                app.showNotification('Tasks created successfully!');
+            }
+
+            function assignTasksToSprint() {
+                if (app.sprints.length === 0) {
+                    app.showNotification('Please create a sprint first!', 'warning');
+                    return;
+                }
+
+                const sprintId = app.sprints[0].id;
+                const tasksWithoutSprint = app.tasks.filter(t => !t.sprintId);
+                
+                tasksWithoutSprint.forEach(task => {
+                    app.assignTaskToSprint(task.id, sprintId);
+                });
+
+                updateInfo(assignmentInfo, {
+                    sprintId: sprintId,
+                    sprintName: app.sprints[0].name,
+                    tasksAssigned: tasksWithoutSprint.length,
+                    allTasksAfterAssignment: app.tasks,
+                    tasksWithSprint: app.tasks.filter(t => t.sprintId),
+                    tasksWithoutSprint: app.tasks.filter(t => !t.sprintId)
+                });
+                
+                app.showNotification(`${tasksWithoutSprint.length} tasks assigned to sprint!`);
+            }
+
+            function updateSprintSelector() {
+                sprintSelect.innerHTML = '<option value="">Select Sprint</option>';
+                app.sprints.forEach(sprint => {
+                    const option = document.createElement('option');
+                    option.value = sprint.id;
+                    option.textContent = sprint.name;
+                    sprintSelect.appendChild(option);
+                });
+            }
+
+            function viewSprintBoard() {
+                const selectedSprintId = sprintSelect.value;
+                if (!selectedSprintId) {
+                    app.showNotification('Please select a sprint first!', 'warning');
+                    return;
+                }
+
+                // Set current sprint
+                app.currentSprint = app.getSprint(selectedSprintId);
+                
+                // Get tasks for this sprint using different methods
+                const tasksBySprint = app.getTasksBySprint(selectedSprintId);
+                const flatTasksForBoard = app.getFlatTasksForSprintBoard(selectedSprintId);
+                
+                // Update board info
+                updateInfo(boardInfo, {
+                    selectedSprintId: selectedSprintId,
+                    currentSprint: app.currentSprint,
+                    tasksBySprint: tasksBySprint,
+                    flatTasksForBoard: flatTasksForBoard,
+                    tasksBySprintCount: tasksBySprint.length,
+                    flatTasksForBoardCount: flatTasksForBoard.length
+                });
+
+                // Display the board
+                sprintBoardDisplay.innerHTML = '';
+                if (flatTasksForBoard.length === 0) {
+                    sprintBoardDisplay.innerHTML = `
+                        <div class="board-empty">
+                            <i class="fas fa-clipboard-list"></i>
+                            <p>No tasks found for this sprint</p>
+                        </div>
+                    `;
+                } else {
+                    flatTasksForBoard.forEach(task => {
+                        const taskEl = document.createElement('div');
+                        taskEl.className = 'task-item';
+                        taskEl.innerHTML = `
+                            <div class="task-info">
+                                <strong>${task.title}</strong>
+                                <div class="task-meta">
+                                    Sprint: ${task.sprintId || 'None'} | 
+                                    Status: ${task.status || 'backlog'} | 
+                                    Points: ${task.points || 1}
+                                    ${task.isSubtask ? ' | Subtask' : ''}
+                                </div>
+                            </div>
+                        `;
+                        sprintBoardDisplay.appendChild(taskEl);
+                    });
+                }
+
+                app.showNotification('Sprint board displayed!');
+            }
+
+            function verifyAllData() {
+                const verification = {
+                    totalTasks: app.tasks.length,
+                    totalSprints: app.sprints.length,
+                    currentView: app.currentView,
+                    currentSprint: app.currentSprint,
+                    
+                    tasksWithSprintId: app.tasks.filter(t => t.sprintId).length,
+                    tasksWithoutSprintId: app.tasks.filter(t => !t.sprintId).length,
+                    
+                    sprintIdsInTasks: [...new Set(app.tasks.map(t => t.sprintId).filter(Boolean))],
+                    sprintIdsAvailable: app.sprints.map(s => s.id),
+                    
+                    // Test getTasksBySprint for each sprint
+                    tasksPerSprint: app.sprints.map(sprint => ({
+                        sprintId: sprint.id,
+                        sprintName: sprint.name,
+                        tasks: app.getTasksBySprint(sprint.id)
+                    })),
+                    
+                    // Test getFlatTasksForSprintBoard for each sprint
+                    flatTasksPerSprint: app.sprints.map(sprint => ({
+                        sprintId: sprint.id,
+                        sprintName: sprint.name,
+                        tasks: app.getFlatTasksForSprintBoard(sprint.id)
+                    }))
+                };
+
+                updateInfo(verificationInfo, verification);
+                app.showNotification('Data verification completed!');
+            }
+
+            // Event listeners
+            createSprintBtn.addEventListener('click', createTestSprint);
+            createTasksBtn.addEventListener('click', createTestTasks);
+            assignTasksBtn.addEventListener('click', assignTasksToSprint);
+            viewBoardBtn.addEventListener('click', viewSprintBoard);
+            verifyDataBtn.addEventListener('click', verifyAllData);
+
+            // Initialize
+            updateInfo(sprintInfo, { message: 'No sprint created yet' });
+            updateInfo(tasksInfo, { message: 'No tasks created yet' });
+            updateInfo(assignmentInfo, { message: 'No tasks assigned yet' });
+            updateInfo(boardInfo, { message: 'No board viewed yet' });
+            updateInfo(verificationInfo, { message: 'Click "Verify All Data" to see complete analysis' });
+        });
+    </script>
+</body>
+</html>

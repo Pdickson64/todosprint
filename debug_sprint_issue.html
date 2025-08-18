@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprint Board Debug</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Sprint Board Debug</h1>
+        
+        <div class="debug-section">
+            <h2>Test Results</h2>
+            <div id="test-results"></div>
+        </div>
+        
+        <div class="debug-section">
+            <h2>Current Sprint Board State</h2>
+            <div id="current-board"></div>
+        </div>
+        
+        <div class="debug-section">
+            <h2>Task Data</h2>
+            <div id="task-data"></div>
+        </div>
+    </div>
+
+    <script>
+        // Wait for the app to initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            const app = window.app;
+            
+            function log(message) {
+                const results = document.getElementById('test-results');
+                results.innerHTML += `<p>${message}</p>`;
+                console.log(message);
+            }
+            
+            function displayBoard() {
+                const boardDiv = document.getElementById('current-board');
+                const sprintId = app.currentSprint ? app.currentSprint.id : 
+                    document.getElementById('sprint-selector')?.value;
+                
+                if (sprintId) {
+                    const sprint = app.getSprint(sprintId);
+                    const tasks = app.getFlatTasksForSprintBoard(sprintId);
+                    
+                    boardDiv.innerHTML = `
+                        <h3>Sprint: ${sprint ? sprint.name : 'Unknown'}</h3>
+                        <p>Tasks found: ${tasks.length}</p>
+                        <ul>
+                            ${tasks.map(task => `<li>${task.title} (ID: ${task.id}, Sprint: ${task.sprintId}, Status: ${task.status})</li>`).join('')}
+                        </ul>
+                    `;
+                } else {
+                    boardDiv.innerHTML = '<p>No sprint selected</p>';
+                }
+            }
+            
+            function displayTaskData() {
+                const taskDiv = document.getElementById('task-data');
+                const allTasks = app.tasks;
+                
+                taskDiv.innerHTML = `
+                    <h3>All Tasks (${allTasks.length})</h3>
+                    <ul>
+                        ${allTasks.map(task => `
+                            <li>
+                                ${task.title} 
+                                (ID: ${task.id}, 
+                                Sprint: ${task.sprintId || 'None'}, 
+                                Status: ${task.status}, 
+                                Folder: ${task.folderId || 'None'})
+                            </li>
+                        `).join('')}
+                    </ul>
+                `;
+            }
+            
+            // Run the test
+            log('=== Starting Sprint Board Debug Test ===');
+            
+            // Clear any existing data
+            app.tasks = [];
+            app.sprints = [];
+            app.saveData();
+            
+            // Create a test sprint
+            log('Creating test sprint...');
+            const sprint = app.createSprint({
+                name: 'Test Sprint',
+                startDate: '2025-01-01',
+                endDate: '2025-01-14',
+                duration: 14
+            });
+            log(`Created sprint: ${sprint.name} (ID: ${sprint.id})`);
+            
+            // Create a test task
+            log('Creating test task...');
+            const task = app.createTask({
+                title: 'Test Task for Sprint',
+                description: 'This task should appear on the sprint board',
+                points: 3,
+                priority: 'medium'
+            });
+            log(`Created task: ${task.title} (ID: ${task.id})`);
+            
+            // Display initial state
+            log('=== Initial State ===');
+            displayTaskData();
+            displayBoard();
+            
+            // Assign task to sprint
+            log('=== Assigning Task to Sprint ===');
+            app.assignTaskToSprint(task.id, sprint.id);
+            log(`Assigned task ${task.id} to sprint ${sprint.id}`);
+            
+            // Display state after assignment
+            log('=== State After Assignment ===');
+            displayTaskData();
+            displayBoard();
+            
+            // Check if task appears on sprint board
+            const sprintTasks = app.getTasksBySprint(sprint.id);
+            log(`Tasks in sprint ${sprint.id}: ${sprintTasks.length}`);
+            sprintTasks.forEach(t => log(`  - ${t.title} (ID: ${t.id}, Sprint: ${t.sprintId})`));
+            
+            // Check if task appears in flat list for sprint board
+            const flatTasks = app.getFlatTasksForSprintBoard(sprint.id);
+            log(`Flat tasks for sprint board: ${flatTasks.length}`);
+            flatTasks.forEach(t => log(`  - ${t.title} (ID: ${t.id}, Sprint: ${t.sprintId})`));
+            
+            // Try to view the sprint board
+            log('=== Testing Sprint Board View ===');
+            app.viewSprintBoard(sprint.id);
+            displayBoard();
+            
+            log('=== Test Complete ===');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Sprint Board Issue</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .debug-panel {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .debug-section {
+            margin-bottom: 1rem;
+        }
+        .debug-section h3 {
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+        .debug-log {
+            background: #fff;
+            border: 1px solid #ccc;
+            padding: 0.5rem;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .task-info {
+            background: #fff;
+            border: 1px solid #ccc;
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            border-radius: 4px;
+        }
+        .task-info h4 {
+            margin: 0 0 0.5rem 0;
+            color: #333;
+        }
+        .task-info p {
+            margin: 0.25rem 0;
+            font-size: 0.9rem;
+        }
+        .task-info .task-id {
+            font-weight: bold;
+            color: #007bff;
+        }
+        .task-info .task-title {
+            font-weight: bold;
+            color: #333;
+        }
+        .task-info .task-sprint {
+            color: #28a745;
+        }
+        .task-info .task-status {
+            color: #dc3545;
+        }
+        .task-info .task-folder {
+            color: #6c757d;
+        }
+        .task-info .task-points {
+            color: #ffc107;
+        }
+        .task-info .task-priority {
+            color: #17a2b8;
+        }
+        .task-info .task-due-date {
+            color: #6f42c1;
+        }
+        .task-info .task-description {
+            color: #495057;
+            font-style: italic;
+        }
+        .task-info .task-subtasks {
+            color: #20c997;
+        }
+        .task-info .task-created-at {
+            color: #6c757d;
+            font-size: 0.8rem;
+        }
+        .task-info .task-updated-at {
+            color: #6c757d;
+            font-size: 0.8rem;
+        }
+        .task-info .task-activity-log {
+            color: #6c757d;
+            font-size: 0.8rem;
+        }
+        .task-info .task-activity-log ul {
+            margin: 0;
+            padding-left: 1rem;
+        }
+        .task-info .task-activity-log li {
+            margin-bottom: 0.25rem;
+        }
+        .task-info .task-activity-log .activity-timestamp {
+            color: #6c757d;
+            font-size: 0.8rem;
+        }
+        .task-info .task-activity-log .activity-comment {
+            color: #495057;
+            font-size: 0.9rem;
+        }
+        .task-info .task-activity-log .activity-comment strong {
+            color: #333;
+        }
+        .task-info .task-activity-log .activity-comment span {
+            color: #6c757d;
+            font-size: 0.8rem;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .warning {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        .info {
+            color: #17a2b8;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Debug Sprint Board Issue</h1>
+        
+        <div class="debug-panel">
+            <div class="debug-section">
+                <h3>Test Steps</h3>
+                <ol>
+                    <li>Create a sprint</li>
+                    <li>Create a task and assign it to the sprint</li>
+                    <li>View the sprint board</li>
+                    <li>Check if the task appears on the board</li>
+                    <li>Debug the sprint ID determination logic</li>
+                </ol>
+            </div>
+            
+            <div class="debug-section">
+                <h3>Debug Log</h3>
+                <div class="debug-log" id="debug-log"></div>
+            </div>
+            
+            <div class="debug-section">
+                <h3>Current Sprint Info</h3>
+                <div id="current-sprint-info"></div>
+            </div>
+            
+            <div class="debug-section">
+                <h3>Sprint Selector Info</h3>
+                <div id="sprint-selector-info"></div>
+            </div>
+            
+            <div class="debug-section">
+                <h3>Sprint Board Tasks</h3>
+                <div id="sprint-board-tasks"></div>
+            </div>
+        </div>
+        
+        <div class="debug-panel">
+            <h3>Test Controls</h3>
+            <button onclick="testCreateSprint()">Create Test Sprint</button>
+            <button onclick="testCreateTask()">Create Test Task</button>
+            <button onclick="testViewSprintBoard()">View Sprint Board</button>
+            <button onclick="testDebugSprintId()">Debug Sprint ID Logic</button>
+            <button onclick="testGetTasksBySprint()">Get Tasks by Sprint</button>
+            <button onclick="testGetFlatTasksForSprintBoard()">Get Flat Tasks for Board</button>
+            <button onclick="testRenderSprintBoard()">Test Render Sprint Board</button>
+            <button onclick="clearDebugLog()">Clear Log</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Debug logging function
+        function log(message, type = 'info') {
+            const debugLog = document.getElementById('debug-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const typeClass = type;
+            debugLog.innerHTML += `<span class="${typeClass}">[${timestamp}] ${message}</span><br>`;
+            debugLog.scrollTop = debugLog.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        // Clear debug log
+        function clearDebugLog() {
+            document.getElementById('debug-log').innerHTML = '';
+            document.getElementById('current-sprint-info').innerHTML = '';
+            document.getElementById('sprint-selector-info').innerHTML = '';
+            document.getElementById('sprint-board-tasks').innerHTML = '';
+        }
+
+        // Test 1: Create a sprint
+        function testCreateSprint() {
+            log('=== Test 1: Create Sprint ===', 'info');
+            
+            const sprintData = {
+                name: 'Debug Sprint 1',
+                startDate: '2025-08-17',
+                endDate: '2025-08-24',
+                duration: 7
+            };
+            
+            const sprint = app.createSprint(sprintData);
+            log(`Created sprint: ${sprint.name} (ID: ${sprint.id})`, 'success');
+            log(`Sprint status: ${sprint.status}`, 'info');
+            log(`Sprint dates: ${sprint.startDate} to ${sprint.endDate}`, 'info');
+            
+            // Update sprint selector info
+            updateSprintSelectorInfo();
+        }
+
+        // Test 2: Create a task and assign it to the sprint
+        function testCreateTask() {
+            log('=== Test 2: Create Task and Assign to Sprint ===', 'info');
+            
+            // Get the first sprint
+            const sprints = app.sprints;
+            if (sprints.length === 0) {
+                log('ERROR: No sprints found. Please create a sprint first.', 'error');
+                return;
+            }
+            
+            const sprintId = sprints[0].id;
+            log(`Using sprint: ${sprints[0].name} (ID: ${sprintId})`, 'info');
+            
+            const taskData = {
+                title: 'Debug Task for Sprint Board',
+                description: 'This task should appear on the sprint board',
+                points: 5,
+                priority: 'high',
+                sprintId: sprintId
+            };
+            
+            const task = app.createTask(taskData);
+            log(`Created task: ${task.title} (ID: ${task.id})`, 'success');
+            log(`Task sprint ID: ${task.sprintId}`, 'info');
+            log(`Task status: ${task.status}`, 'info');
+            log(`Task points: ${task.points}`, 'info');
+            log(`Task priority: ${task.priority}`, 'info');
+            
+            // Verify task assignment
+            if (task.sprintId === sprintId) {
+                log(`Task successfully assigned to sprint ${sprintId}`, 'success');
+            } else {
+                log(`ERROR: Task not assigned to correct sprint! Expected ${sprintId}, got ${task.sprintId}`, 'error');
+            }
+        }
+
+        // Test 3: View the sprint board
+        function testViewSprintBoard() {
+            log('=== Test 3: View Sprint Board ===', 'info');
+            
+            // Get the first sprint
+            const sprints = app.sprints;
+            if (sprints.length === 0) {
+                log('ERROR: No sprints found. Please create a sprint first.', 'error');
+                return;
+            }
+            
+            const sprintId = sprints[0].id;
+            log(`Viewing sprint board for: ${sprints[0].name} (ID: ${sprintId})`, 'info');
+            
+            // Set current sprint
+            app.currentSprint = app.getSprint(sprintId);
+            log(`Current sprint set to: ${app.currentSprint.name}`, 'success');
+            
+            // Switch to board view
+            app.switchView('board');
+            log(`Switched to board view`, 'success');
+            
+            // Display current sprint info
+            updateCurrentSprintInfo();
+        }
+
+        // Test 4: Debug sprint ID logic
+        function testDebugSprintId() {
+            log('=== Test 4: Debug Sprint ID Logic ===', 'info');
+            
+            // Check current sprint
+            log(`Current sprint: ${app.currentSprint ? app.currentSprint.name : 'None'}`, 'info');
+            log(`Current sprint ID: ${app.currentSprint ? app.currentSprint.id : 'None'}`, 'info');
+            
+            // Check sprint selector
+            const sprintSelector = document.getElementById('sprint-selector');
+            log(`Sprint selector element: ${sprintSelector ? 'Found' : 'Not found'}`, 'info');
+            
+            if (sprintSelector) {
+                log(`Sprint selector value: ${sprintSelector.value}`, 'info');
+                log(`Sprint selector options: ${sprintSelector.options.length}`, 'info');
+                
+                for (let i = 0; i < sprintSelector.options.length; i++) {
+                    log(`Option ${i}: ${sprintSelector.options[i].value} - ${sprintSelector.options[i].text}`, 'info');
+                }
+            }
+            
+            // Test renderSprintBoard logic
+            const sprintId = app.currentSprint ? app.currentSprint.id : 
+                (sprintSelector ? sprintSelector.value : null);
+            
+            log(`Determined sprint ID: ${sprintId}`, 'info');
+            
+            if (!sprintId) {
+                log('ERROR: No sprint ID determined!', 'error');
+            } else {
+                log(`Sprint ID determined successfully: ${sprintId}`, 'success');
+                
+                // Test getTasksBySprint
+                const tasks = app.getTasksBySprint(sprintId);
+                log(`getTasksBySprint(${sprintId}) returned ${tasks.length} tasks`, 'info');
+                
+                // Test getFlatTasksForSprintBoard
+                const flatTasks = app.getFlatTasksForSprintBoard(sprintId);
+                log(`getFlatTasksForSprintBoard(${sprintId}) returned ${flatTasks.length} tasks`, 'info');
+            }
+        }
+
+        // Test 5: Get tasks by sprint
+        function testGetTasksBySprint() {
+            log('=== Test 5: Get Tasks by Sprint ===', 'info');
+            
+            if (!app.currentSprint) {
+                log('ERROR: No current sprint set. Please view a sprint board first.', 'error');
+                return;
+            }
+            
+            const sprintId = app.currentSprint.id;
+            const tasks = app.getTasksBySprint(sprintId);
+            
+            log(`Found ${tasks.length} tasks for sprint ${sprintId}:`, 'info');
+            
+            if (tasks.length === 0) {
+                log('WARNING: No tasks found for this sprint!', 'warning');
+            } else {
+                tasks.forEach((task, index) => {
+                    log(`Task ${index + 1}: ${task.title} (ID: ${task.id}, Status: ${task.status})`, 'success');
+                });
+            }
+            
+            // Display tasks
+            displayTasks(tasks, 'sprint-board-tasks');
+        }
+
+        // Test 6: Get flat tasks for sprint board
+        function testGetFlatTasksForSprintBoard() {
+            log('=== Test 6: Get Flat Tasks for Sprint Board ===', 'info');
+            
+            if (!app.currentSprint) {
+                log('ERROR: No current sprint set. Please view a sprint board first.', 'error');
+                return;
+            }
+            
+            const sprintId = app.currentSprint.id;
+            const flatTasks = app.getFlatTasksForSprintBoard(sprintId);
+            
+            log(`Found ${flatTasks.length} flat tasks for sprint board ${sprintId}:`, 'info');
+            
+            if (flatTasks.length === 0) {
+                log('WARNING: No flat tasks found for this sprint board!', 'warning');
+            } else {
+                flatTasks.forEach((task, index) => {
+                    const isSubtask = task.isSubtask ? ' (SUBTASK)' : '';
+                    log(`Task ${index + 1}${isSubtask}: ${task.title} (ID: ${task.id}, Status: ${task.status})`, 'success');
+                });
+            }
+            
+            // Display tasks
+            displayTasks(flatTasks, 'sprint-board-tasks');
+        }
+
+        // Test 7: Test render sprint board
+        function testRenderSprintBoard() {
+            log('=== Test 7: Test Render Sprint Board ===', 'info');
+            
+            // Check if board container exists
+            const boardContainer = document.getElementById('board-container');
+            log(`Board container: ${boardContainer ? 'Found' : 'Not found'}`, 'info');
+            
+            if (!boardContainer) {
+                log('ERROR: Board container not found!', 'error');
+                return;
+            }
+            
+            // Get sprint ID using the same logic as renderSprintBoard
+            const sprintId = app.currentSprint ? app.currentSprint.id :
+                document.getElementById('sprint-selector').value;
+            
+            log(`Sprint ID from render logic: ${sprintId}`, 'info');
+            
+            if (!sprintId) {
+                log('ERROR: No sprint ID found in render logic!', 'error');
+                return;
+            }
+            
+            // Test the renderSprintBoard method
+            log('Calling renderSprintBoard...', 'info');
+            app.renderSprintBoard();
+            
+            // Check what's in the board container
+            setTimeout(() => {
+                const boardContent = boardContainer.innerHTML;
+                log(`Board container content length: ${boardContent.length}`, 'info');
+                
+                if (boardContent.includes('No tasks found')) {
+                    log('Board shows "No tasks found" - this indicates the issue!', 'error');
+                } else if (boardContent.includes('Select a Sprint')) {
+                    log('Board shows "Select a Sprint" - sprint ID issue!', 'error');
+                } else {
+                    log('Board appears to have content', 'success');
+                }
+            }, 100);
+        }
+
+        // Helper function to update current sprint info
+        function updateCurrentSprintInfo() {
+            const sprintInfo = document.getElementById('current-sprint-info');
+            if (app.currentSprint) {
+                sprintInfo.innerHTML = `
+                    <div class="task-info">
+                        <h4>Current Sprint</h4>
+                        <p><strong>Name:</strong> <span class="task-title">${app.currentSprint.name}</span></p>
+                        <p><strong>ID:</strong> <span class="task-id">${app.currentSprint.id}</span></p>
+                        <p><strong>Status:</strong> <span class="task-status">${app.currentSprint.status}</span></p>
+                        <p><strong>Dates:</strong> ${app.currentSprint.startDate} to ${app.currentSprint.endDate}</p>
+                    </div>
+                `;
+            } else {
+                sprintInfo.innerHTML = '<p class="error">No current sprint set</p>';
+            }
+        }
+
+        // Helper function to update sprint selector info
+        function updateSprintSelectorInfo() {
+            const sprintSelector = document.getElementById('sprint-selector');
+            const selectorInfo = document.getElementById('sprint-selector-info');
+            
+            if (sprintSelector) {
+                selectorInfo.innerHTML = `
+                    <div class="task-info">
+                        <h4>Sprint Selector</h4>
+                        <p><strong>Value:</strong> <span class="task-id">${sprintSelector.value}</span></p>
+                        <p><strong>Options:</strong> ${sprintSelector.options.length}</p>
+                        <p><strong>Options list:</strong></p>
+                        <ul>
+                            ${Array.from(sprintSelector.options).map(option => 
+                                `<li>${option.value} - ${option.text}</li>`
+                            ).join('')}
+                        </ul>
+                    </div>
+                `;
+            } else {
+                selectorInfo.innerHTML = '<p class="error">Sprint selector not found</p>';
+            }
+        }
+
+        // Helper function to display tasks
+        function displayTasks(tasks, containerId) {
+            const tasksDiv = document.getElementById(containerId);
+            if (tasks.length === 0) {
+                tasksDiv.innerHTML = '<p style="color: red;">No tasks found!</p>';
+            } else {
+                tasksDiv.innerHTML = tasks.map(task => `
+                    <div class="task-info">
+                        <h4>Task ${task.id}</h4>
+                        <p><strong>Title:</strong> <span class="task-title">${task.title}</span></p>
+                        <p><strong>ID:</strong> <span class="task-id">${task.id}</span></p>
+                        <p><strong>Sprint ID:</strong> <span class="task-sprint">${task.sprintId}</span></p>
+                        <p><strong>Status:</strong> <span class="task-status">${task.status}</span></p>
+                        <p><strong>Points:</strong> <span class="task-points">${task.points}</span></p>
+                        <p><strong>Priority:</strong> <span class="task-priority">${task.priority}</span></p>
+                        <p><strong>Description:</strong> <span class="task-description">${task.description}</span></p>
+                        <p><strong>Created:</strong> <span class="task-created-at">${task.createdAt}</span></p>
+                        <p><strong>Updated:</strong> <span class="task-updated-at">${task.updatedAt}</span></p>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Initialize the app and log startup
+        document.addEventListener('DOMContentLoaded', function() {
+            log('=== Debug Sprint Board Test Initialized ===', 'info');
+            log(`App loaded: ${app.constructor.name}`, 'success');
+            log(`Initial tasks: ${app.tasks.length}`, 'info');
+            log(`Initial sprints: ${app.sprints.length}`, 'info');
+            log(`Initial folders: ${app.folders.length}`, 'info');
+            log(`Current view: ${app.currentView}`, 'info');
+            log(`Current sprint: ${app.currentSprint ? app.currentSprint.name : 'None'}`, 'info');
+            
+            // Update sprint selector info
+            updateSprintSelectorInfo();
+        });
+    </script>
+</body>
+</html>

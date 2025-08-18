@@ -70,7 +70,13 @@ function SprintTodoApp() {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('Add to Folder button clicked');
-                this.openTaskModal();
+                
+                // Get the currently selected folder
+                const activeFolder = document.querySelector('.folder-item.active');
+                const folderId = activeFolder ? activeFolder.dataset.folderId : null;
+                
+                // Open task modal with folder pre-selected
+                this.openTaskModal({ folderId: folderId });
             });
         }
         
@@ -81,7 +87,13 @@ function SprintTodoApp() {
                 e.preventDefault();
                 e.stopPropagation();
                 console.log('Add Task to Sprint button clicked');
-                this.openTaskModal();
+                
+                // Get the currently selected sprint
+                const currentSprintId = this.currentSprint ? this.currentSprint.id :
+                    document.getElementById('sprint-selector').value;
+                
+                // Open task modal with sprint pre-selected
+                this.openTaskModal({ sprintId: currentSprintId });
             });
         }
         
@@ -179,6 +191,9 @@ function SprintTodoApp() {
             return null;
         }
         
+        // Set initial status based on whether task is assigned to a sprint
+        const initialStatus = taskData.sprintId ? 'todo' : 'backlog';
+        
         const task = {
             id: Date.now().toString(),
             title: taskData.title,
@@ -188,7 +203,7 @@ function SprintTodoApp() {
             dueDate: taskData.dueDate || null,
             sprintId: taskData.sprintId || null,
             folderId: taskData.folderId || null,
-            status: 'backlog',
+            status: initialStatus,
             subtasks: [],
             recurring: taskData.recurring || false,
             recurringType: taskData.recurringType || null,
@@ -216,6 +231,9 @@ function SprintTodoApp() {
         const parentTask = this.getTask(parentTaskId);
         if (!parentTask) return null;
         
+        // Set initial status based on whether subtask is assigned to a sprint
+        const initialStatus = subtaskData.sprintId ? 'todo' : 'backlog';
+        
         // Create a subtask reference (not a full task)
         const subtask = {
             id: Date.now().toString(),
@@ -226,7 +244,7 @@ function SprintTodoApp() {
             dueDate: subtaskData.dueDate || null,
             sprintId: subtaskData.sprintId || null,
             folderId: subtaskData.folderId || parentTask.folderId,
-            status: 'backlog',
+            status: initialStatus,
             subtasks: [],
             recurring: subtaskData.recurring || false,
             recurringType: subtaskData.recurringType || null,
@@ -989,6 +1007,10 @@ function SprintTodoApp() {
             sprintSelector.addEventListener('change', (e) => {
                 const sprintId = e.target.value;
                 this.currentSprint = sprintId ? this.getSprint(sprintId) : null;
+                console.log('Sprint selector changed:', {
+                    sprintId: sprintId,
+                    currentSprint: this.currentSprint
+                });
                 this.renderSprintBoard();
             });
         }
@@ -1686,16 +1708,31 @@ function SprintTodoApp() {
 
     SprintTodoApp.prototype.renderSprintBoard = function() {
         console.log('renderSprintBoard called');
-        const container = document.getElementById('board-container');
-        container.innerHTML = '';
+        const boardContainer = document.getElementById('board-container');
+        if (!boardContainer) {
+            console.error('board-container not found');
+            return;
+        }
         
-        const sprintId = this.currentSprint ? this.currentSprint.id :
-            document.getElementById('sprint-selector').value;
+        boardContainer.innerHTML = '';
         
-        console.log('Sprint ID:', sprintId);
+        // Get sprint ID from selector first
+        const sprintSelector = document.getElementById('sprint-selector');
+        let sprintId = sprintSelector ? sprintSelector.value : null;
+        
+        // If no selector value, use currentSprint
+        if (!sprintId && this.currentSprint) {
+            sprintId = this.currentSprint.id;
+        }
+        
+        console.log('Sprint ID determination:', {
+            selectorValue: sprintSelector ? sprintSelector.value : null,
+            currentSprint: this.currentSprint ? this.currentSprint.id : null,
+            finalSprintId: sprintId
+        });
         
         if (!sprintId) {
-            container.innerHTML = `
+            boardContainer.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-columns"></i>
                     <h3>Select a Sprint</h3>
@@ -1705,7 +1742,12 @@ function SprintTodoApp() {
             return;
         }
         
+        // Ensure currentSprint is set to the selected sprint
         const sprint = this.getSprint(sprintId);
+        if (sprint) {
+            this.currentSprint = sprint;
+        }
+        
         const tasks = this.getFlatTasksForSprintBoard(sprintId);
         const statuses = this.getBoardStatuses();
         
@@ -1727,8 +1769,6 @@ function SprintTodoApp() {
                 return this.createTaskElement(task);
             }).join('');
             
-            console.log('Task elements:', taskElements);
-            
             // Create column using innerHTML for simplicity
             column.innerHTML = `
                 <div class="column-header">
@@ -1740,7 +1780,7 @@ function SprintTodoApp() {
                     ${statusTasks.length === 0 ? '<p class="empty-state">No tasks</p>' : ''}
                 </div>
             `;
-            container.appendChild(column);
+            boardContainer.appendChild(column);
         });
     }
 
@@ -2101,6 +2141,9 @@ function SprintTodoApp() {
                 if (task) {
                     sprintSelect.value = task.sprintId || '';
                 }
+            } else if (taskData.sprintId) {
+                // Set sprint selection if provided in taskData (for "Add Task to Sprint" button)
+                sprintSelect.value = taskData.sprintId;
             }
         }
         
@@ -2122,6 +2165,12 @@ function SprintTodoApp() {
             // Insert folder selection before the recurring task checkbox
             const recurringGroup = document.querySelector('#recurring-options').parentElement;
             recurringGroup.parentNode.insertBefore(folderGroup, recurringGroup);
+            
+            // Set the folder ID on the form so the submission handler can find it
+            form.dataset.folderId = taskData.folderId;
+        } else {
+            // Ensure no folder ID is set on the form
+            form.dataset.folderId = '';
         }
         
         modal.classList.add('active');
@@ -2760,8 +2809,9 @@ function SprintTodoApp() {
             }
         }
         
-        // Refresh the sprint board if we're in board view
-        if (this.currentView === 'board') {
+        // Always refresh the sprint board if we have a current sprint
+        // This ensures tasks appear on the board when assigned from backlog
+        if (this.currentSprint) {
             this.renderSprintBoard();
         }
     }
@@ -2954,10 +3004,48 @@ function SprintTodoApp() {
         }
     }
 
+    SprintTodoApp.prototype.resetAllData = function() {
+        if (confirm('Are you sure you want to reset ALL data? This will delete all tasks, sprints, and folders.')) {
+            // Clear all arrays
+            this.tasks = [];
+            this.sprints = [];
+            this.folders = [];
+            this.boardStatuses = [];
+            this.folderStates = {};
+            
+            // Clear localStorage
+            localStorage.removeItem('sprint-todo-tasks');
+            localStorage.removeItem('sprint-todo-sprints');
+            localStorage.removeItem('sprint-todo-folders');
+            localStorage.removeItem('sprint-todo-board-statuses');
+            localStorage.removeItem('sprint-todo-folder-states');
+            
+            // Reset current state
+            this.currentView = 'backlog';
+            this.currentSprint = null;
+            
+            // Re-render the app
+            this.render();
+            this.showNotification('All data has been reset successfully!');
+        }
+    }
+
     SprintTodoApp.prototype.viewSprintBoard = function(sprintId) {
-        this.currentSprint = this.getSprint(sprintId);
+        console.log('viewSprintBoard called with sprintId:', sprintId);
+        const sprint = this.getSprint(sprintId);
+        if (!sprint) {
+            console.error('Sprint not found:', sprintId);
+            return;
+        }
+        
+        this.currentSprint = sprint;
         document.getElementById('sprint-selector').value = sprintId;
         this.switchView('board');
+        
+        // Ensure the sprint board is rendered after switching views
+        setTimeout(() => {
+            this.renderSprintBoard();
+        }, 100);
     }
 
     SprintTodoApp.prototype.showCreateFolderDialog = function() {

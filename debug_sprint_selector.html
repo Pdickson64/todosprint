@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprint Selector Debug</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Sprint Selector Debug</h1>
+        
+        <div class="debug-section">
+            <h2>Current State</h2>
+            <div id="current-state">
+                <p>Current Sprint: <span id="current-sprint-display">None</span></p>
+                <p>Sprint Selector Value: <span id="selector-value-display">None</span></p>
+                <p>Current View: <span id="current-view-display">None</span></p>
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <h2>Test Sprint Board Navigation</h2>
+            <button id="test-view-board-btn" class="btn-primary">Test View Board Flow</button>
+            <button id="test-selector-change-btn" class="btn-secondary">Test Selector Change</button>
+            <div id="test-result" class="test-result"></div>
+        </div>
+
+        <div class="debug-section">
+            <h2>Sprint Board</h2>
+            <div class="board-controls">
+                <select id="sprint-selector">
+                    <option value="">Select Sprint</option>
+                </select>
+                <button id="view-board-btn" class="btn-primary">View Board</button>
+            </div>
+            <div id="board-container" class="board-container"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Debug version of the app
+        class DebugSprintTodoApp extends SprintTodoApp {
+            constructor() {
+                super();
+                this.debugMode = true;
+            }
+
+            log(message, data) {
+                if (this.debugMode) {
+                    console.log(`[DEBUG] ${message}`, data);
+                    this.updateDebugDisplay();
+                }
+            }
+
+            updateDebugDisplay() {
+                document.getElementById('current-sprint-display').textContent = 
+                    this.currentSprint ? this.currentSprint.name : 'None';
+                document.getElementById('selector-value-display').textContent = 
+                    document.getElementById('sprint-selector').value || 'None';
+                document.getElementById('current-view-display').textContent = this.currentView;
+            }
+
+            viewSprintBoard(sprintId) {
+                this.log('viewSprintBoard called', { sprintId });
+                const sprint = this.getSprint(sprintId);
+                this.log('Sprint found', sprint);
+                
+                this.currentSprint = sprint;
+                document.getElementById('sprint-selector').value = sprintId;
+                this.log('Sprint selector set', { 
+                    selectorValue: document.getElementById('sprint-selector').value 
+                });
+                
+                this.switchView('board');
+                this.log('After switchView', { 
+                    currentSprint: this.currentSprint,
+                    currentView: this.currentView
+                });
+            }
+
+            renderSprintBoard() {
+                this.log('renderSprintBoard called');
+                const container = document.getElementById('board-container');
+                container.innerHTML = '';
+                
+                const sprintId = this.currentSprint ? this.currentSprint.id :
+                    document.getElementById('sprint-selector').value;
+                
+                this.log('Sprint ID determination', {
+                    currentSprint: this.currentSprint,
+                    currentSprintId: this.currentSprint ? this.currentSprint.id : 'null',
+                    selectorValue: document.getElementById('sprint-selector').value,
+                    finalSprintId: sprintId
+                });
+                
+                if (!sprintId) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-columns"></i>
+                            <h3>Select a Sprint</h3>
+                            <p>Choose a sprint to view its board</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const sprint = this.getSprint(sprintId);
+                const tasks = this.getFlatTasksForSprintBoard(sprintId);
+                
+                this.log('Tasks found', { 
+                    sprintId, 
+                    taskCount: tasks.length,
+                    taskIds: tasks.map(t => t.id)
+                });
+                
+                // Simple display for debugging
+                container.innerHTML = `
+                    <div class="debug-board">
+                        <h3>Sprint: ${sprint.name}</h3>
+                        <p>Tasks: ${tasks.length}</p>
+                        <ul>
+                            ${tasks.map(task => `<li>${task.title} (ID: ${task.id})</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            switchView(viewName) {
+                this.log('switchView called', { viewName });
+                super.switchView(viewName);
+            }
+        }
+
+        // Initialize debug app
+        const debugApp = new DebugSprintTodoApp();
+
+        // Test functions
+        document.getElementById('test-view-board-btn').addEventListener('click', () => {
+            const testResult = document.getElementById('test-result');
+            testResult.innerHTML = '<p>Testing View Board flow...</p>';
+            
+            // Get first sprint
+            const firstSprint = debugApp.sprints[0];
+            if (firstSprint) {
+                debugApp.log('Testing with sprint', firstSprint);
+                debugApp.viewSprintBoard(firstSprint.id);
+                testResult.innerHTML += '<p class="success">✓ View Board flow completed</p>';
+            } else {
+                testResult.innerHTML += '<p class="error">✗ No sprints available for testing</p>';
+            }
+        });
+
+        document.getElementById('test-selector-change-btn').addEventListener('click', () => {
+            const testResult = document.getElementById('test-result');
+            testResult.innerHTML = '<p>Testing Selector Change flow...</p>';
+            
+            // Get first sprint
+            const firstSprint = debugApp.sprints[0];
+            if (firstSprint) {
+                debugApp.log('Testing selector change', firstSprint);
+                document.getElementById('sprint-selector').value = firstSprint.id;
+                debugApp.renderSprintBoard();
+                testResult.innerHTML += '<p class="success">✓ Selector Change flow completed</p>';
+            } else {
+                testResult.innerHTML += '<p class="error">✗ No sprints available for testing</p>';
+            }
+        });
+
+        // Initialize with test data
+        function initializeTestData() {
+            // Create test sprints
+            const sprint1 = debugApp.createSprint({
+                name: 'Sprint 1',
+                startDate: '2025-01-01',
+                endDate: '2025-01-14',
+                duration: 14
+            });
+            
+            const sprint2 = debugApp.createSprint({
+                name: 'Sprint 2',
+                startDate: '2025-01-15',
+                endDate: '2025-01-28',
+                duration: 14
+            });
+
+            // Create test tasks
+            const task1 = debugApp.createTask({
+                title: 'Task 1',
+                description: 'Test task 1',
+                sprintId: sprint1.id
+            });
+            
+            const task2 = debugApp.createTask({
+                title: 'Task 2',
+                description: 'Test task 2',
+                sprintId: sprint1.id
+            });
+
+            const task3 = debugApp.createTask({
+                title: 'Task 3',
+                description: 'Test task 3',
+                sprintId: sprint2.id
+            });
+
+            // Update sprint status
+            debugApp.updateSprint(sprint1.id, { status: 'active' });
+            debugApp.updateSprint(sprint2.id, { status: 'active' });
+
+            debugApp.log('Test data initialized', {
+                sprints: debugApp.sprints,
+                tasks: debugApp.tasks
+            });
+
+            // Update sprint selector
+            debugApp.renderSprintSelectors();
+            
+            // Update debug display
+            debugApp.updateDebugDisplay();
+        }
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTestData();
+        });
+    </script>
+</body>
+</html>

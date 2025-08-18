@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Existing Tasks</title>
+    <script src="app.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .fix-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .fix-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 3px;
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .fix-btn {
+            background-color: #28a745;
+            color: white;
+        }
+        .check-btn {
+            background-color: #17a2b8;
+            color: white;
+        }
+        .danger-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+        .task-list {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .task-item {
+            padding: 5px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .task-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Fix Existing Tasks in Sprints</h1>
+    <p>This tool will fix existing tasks that are assigned to sprints but have the wrong status.</p>
+    
+    <div class="fix-section">
+        <h2>Check Current Status</h2>
+        <p>Check the current status of tasks assigned to sprints:</p>
+        <button class="check-btn" onclick="checkTaskStatuses()">Check Task Statuses</button>
+        <div id="status-check-result"></div>
+    </div>
+    
+    <div class="fix-section">
+        <h2>Fix Tasks</h2>
+        <p>This will update all tasks that are assigned to sprints but have status 'backlog' to status 'todo':</p>
+        <button class="fix-btn" onclick="fixExistingTasks()">Fix Existing Tasks</button>
+        <div id="fix-result"></div>
+    </div>
+    
+    <div class="fix-section">
+        <h2>Reset All Data</h2>
+        <p>This will clear all tasks, sprints, and folders (use with caution):</p>
+        <button class="danger-btn" onclick="resetAllData()">Reset All Data</button>
+    </div>
+
+    <script>
+        let app;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            app = new SprintTodoApp();
+            console.log('App initialized');
+        });
+        
+        function checkTaskStatuses() {
+            const resultDiv = document.getElementById('status-check-result');
+            const sprintTasks = [];
+            
+            // Get all sprints
+            app.sprints.forEach(sprint => {
+                const tasks = app.getTasksBySprint(sprint.id);
+                tasks.forEach(task => {
+                    sprintTasks.push({
+                        sprint: sprint.name,
+                        task: task.title,
+                        status: task.status,
+                        sprintId: task.sprintId,
+                        taskId: task.id
+                    });
+                });
+            });
+            
+            let html = '<div class="task-list">';
+            html += '<h3>Tasks in Sprints:</h3>';
+            
+            if (sprintTasks.length === 0) {
+                html += '<p>No tasks found in sprints.</p>';
+            } else {
+                sprintTasks.forEach(task => {
+                    const statusClass = task.status === 'todo' ? 'success' : 'error';
+                    const statusText = task.status === 'todo' ? '✓ Correct' : '✗ Wrong (should be todo)';
+                    html += `
+                        <div class="task-item">
+                            <strong>${task.task}</strong> 
+                            (Sprint: ${task.sprint}) - 
+                            Status: <span class="${statusClass}">${task.status} ${statusText}</span>
+                        </div>
+                    `;
+                });
+            }
+            
+            html += '</div>';
+            resultDiv.innerHTML = html;
+        }
+        
+        function fixExistingTasks() {
+            const resultDiv = document.getElementById('fix-result');
+            let fixedCount = 0;
+            let totalCount = 0;
+            
+            // Get all tasks that are assigned to sprints
+            app.tasks.forEach(task => {
+                if (task.sprintId) {
+                    totalCount++;
+                    // If task has a sprint but wrong status, fix it
+                    if (task.status !== 'todo') {
+                        app.updateTask(task.id, { status: 'todo' });
+                        fixedCount++;
+                        console.log(`Fixed task: ${task.title} - set status to 'todo'`);
+                    }
+                }
+            });
+            
+            let html = '<div class="fix-result">';
+            html += `<h3>Fix Results:</h3>`;
+            html += `<p>Fixed ${fixedCount} out of ${totalCount} tasks that were assigned to sprints but had wrong status.</p>`;
+            
+            if (fixedCount > 0) {
+                html += `<p>✓ Tasks have been updated and should now appear on the sprint board.</p>`;
+            } else {
+                html += `<p>✓ No tasks needed fixing. All sprint-assigned tasks already have correct status.</p>`;
+            }
+            
+            html += '</div>';
+            resultDiv.innerHTML = html;
+            
+            // Refresh the UI
+            app.render();
+        }
+        
+        function resetAllData() {
+            if (confirm('Are you sure you want to reset ALL data? This will delete all tasks, sprints, and folders.')) {
+                app.resetAllData();
+                document.getElementById('status-check-result').innerHTML = '';
+                document.getElementById('fix-result').innerHTML = '';
+                alert('All data has been reset successfully!');
+            }
+        }
+    </script>
+</body>
+</html>

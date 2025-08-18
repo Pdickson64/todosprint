@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprint Board Debug Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>Sprint Todo App - Debug Sprint Board</h1>
+            <div class="header-controls">
+                <button id="debug-btn" class="btn btn-primary">
+                    <i class="fas fa-bug"></i> Debug Sprint Board
+                </button>
+                <button id="clear-data-btn" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> Clear All Data
+                </button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="debug-output">
+                <h3>Debug Information</h3>
+                <div id="debug-info" class="debug-info"></div>
+            </div>
+
+            <div class="sprint-section">
+                <h3>Sprint Management</h3>
+                <div class="sprint-controls">
+                    <button id="create-sprint-btn" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Create Test Sprint
+                    </button>
+                    <button id="create-tasks-btn" class="btn btn-info">
+                        <i class="fas fa-tasks"></i> Create Test Tasks
+                    </button>
+                    <button id="assign-tasks-btn" class="btn btn-warning">
+                        <i class="fas fa-link"></i> Assign Tasks to Sprint
+                    </button>
+                </div>
+            </div>
+
+            <div class="board-section">
+                <h3>Sprint Board</h3>
+                <div class="board-controls">
+                    <select id="sprint-selector">
+                        <option value="">Select a Sprint</option>
+                    </select>
+                    <button id="view-board-btn" class="btn btn-primary">
+                        <i class="fas fa-eye"></i> View Board
+                    </button>
+                </div>
+                <div id="sprint-board" class="sprint-board">
+                    <div class="board-empty">
+                        <i class="fas fa-clipboard-list"></i>
+                        <p>Select a sprint and click "View Board" to see tasks</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="backlog-section">
+                <h3>Backlog (for comparison)</h3>
+                <div id="backlog-tasks" class="task-list">
+                    <p>No tasks in backlog</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const app = window.app;
+            const debugInfo = document.getElementById('debug-info');
+            const debugBtn = document.getElementById('debug-btn');
+            const clearDataBtn = document.getElementById('clear-data-btn');
+            const createSprintBtn = document.getElementById('create-sprint-btn');
+            const createTasksBtn = document.getElementById('create-tasks-btn');
+            const assignTasksBtn = document.getElementById('assign-tasks-btn');
+            const viewBoardBtn = document.getElementById('view-board-btn');
+            const sprintSelector = document.getElementById('sprint-selector');
+            const sprintBoard = document.getElementById('sprint-board');
+            const backlogTasks = document.getElementById('backlog-tasks');
+
+            function updateDebugInfo() {
+                const debugData = {
+                    'Total Tasks': app.tasks.length,
+                    'Total Sprints': app.sprints.length,
+                    'Current View': app.currentView,
+                    'Current Sprint': app.currentSprint ? app.currentSprint.name : 'None',
+                    'Tasks with Sprint ID': app.tasks.filter(t => t.sprintId).length,
+                    'Tasks without Sprint ID': app.tasks.filter(t => !t.sprintId).length,
+                    'Sprint IDs in tasks': [...new Set(app.tasks.map(t => t.sprintId).filter(Boolean))],
+                    'Available Sprint IDs': app.sprints.map(s => s.id),
+                    'getTasksBySprint() result': app.getTasksBySprint(app.currentSprint?.id || 'test-sprint-id'),
+                    'getFlatTasksForSprintBoard() result': app.getFlatTasksForSprintBoard(app.currentSprint?.id || 'test-sprint-id')
+                };
+
+                debugInfo.innerHTML = Object.entries(debugData)
+                    .map(([key, value]) => `<div><strong>${key}:</strong> ${JSON.stringify(value, null, 2)}</div>`)
+                    .join('');
+            }
+
+            function updateBacklogDisplay() {
+                backlogTasks.innerHTML = '';
+                if (app.tasks.length === 0) {
+                    backlogTasks.innerHTML = '<p>No tasks in backlog</p>';
+                    return;
+                }
+
+                app.tasks.forEach(task => {
+                    const taskEl = document.createElement('div');
+                    taskEl.className = 'task-item';
+                    taskEl.innerHTML = `
+                        <div class="task-info">
+                            <strong>${task.title}</strong>
+                            <div class="task-meta">
+                                Sprint: ${task.sprintId || 'None'} | 
+                                Status: ${task.status || 'backlog'} | 
+                                Points: ${task.points || 1}
+                            </div>
+                        </div>
+                    `;
+                    backlogTasks.appendChild(taskEl);
+                });
+            }
+
+            function updateSprintSelector() {
+                sprintSelector.innerHTML = '<option value="">Select a Sprint</option>';
+                app.sprints.forEach(sprint => {
+                    const option = document.createElement('option');
+                    option.value = sprint.id;
+                    option.textContent = sprint.name;
+                    sprintSelector.appendChild(option);
+                });
+            }
+
+            function createTestSprint() {
+                const sprint = app.createSprint({
+                    name: 'Test Sprint',
+                    startDate: '2025-08-01',
+                    endDate: '2025-08-14',
+                    duration: 14
+                });
+                updateDebugInfo();
+                updateSprintSelector();
+                app.showNotification('Test sprint created!');
+            }
+
+            function createTestTasks() {
+                const tasks = [
+                    { title: 'Task 1', points: 3, priority: 'high' },
+                    { title: 'Task 2', points: 5, priority: 'medium' },
+                    { title: 'Task 3', points: 2, priority: 'low' },
+                    { title: 'Task 4', points: 8, priority: 'high' }
+                ];
+
+                tasks.forEach(taskData => {
+                    app.createTask(taskData);
+                });
+
+                updateDebugInfo();
+                updateBacklogDisplay();
+                app.showNotification('Test tasks created!');
+            }
+
+            function assignTasksToSprint() {
+                if (app.sprints.length === 0) {
+                    app.showNotification('Please create a sprint first!', 'warning');
+                    return;
+                }
+
+                const sprintId = app.sprints[0].id;
+                let assignedCount = 0;
+
+                app.tasks.forEach(task => {
+                    if (!task.sprintId) {
+                        app.assignTaskToSprint(task.id, sprintId);
+                        assignedCount++;
+                    }
+                });
+
+                updateDebugInfo();
+                updateBacklogDisplay();
+                app.showNotification(`Assigned ${assignedCount} tasks to sprint!`);
+            }
+
+            function viewSprintBoard() {
+                const selectedSprintId = sprintSelector.value;
+                if (!selectedSprintId) {
+                    app.showNotification('Please select a sprint first!', 'warning');
+                    return;
+                }
+
+                // Call the actual sprint board rendering method
+                app.currentSprint = app.getSprint(selectedSprintId);
+                app.switchView('board');
+
+                // Also manually render for debugging
+                const tasksForBoard = app.getFlatTasksForSprintBoard(selectedSprintId);
+                
+                sprintBoard.innerHTML = '';
+                if (tasksForBoard.length === 0) {
+                    sprintBoard.innerHTML = `
+                        <div class="board-empty">
+                            <i class="fas fa-clipboard-list"></i>
+                            <p>No tasks found for this sprint</p>
+                        </div>
+                    `;
+                } else {
+                    tasksForBoard.forEach(task => {
+                        const taskEl = document.createElement('div');
+                        taskEl.className = 'task-item';
+                        taskEl.innerHTML = `
+                            <div class="task-info">
+                                <strong>${task.title}</strong>
+                                <div class="task-meta">
+                                    Sprint: ${task.sprintId || 'None'} | 
+                                    Status: ${task.status || 'backlog'} | 
+                                    Points: ${task.points || 1}
+                                    ${task.isSubtask ? ' | Subtask' : ''}
+                                </div>
+                            </div>
+                        `;
+                        sprintBoard.appendChild(taskEl);
+                    });
+                }
+
+                updateDebugInfo();
+            }
+
+            // Event listeners
+            debugBtn.addEventListener('click', updateDebugInfo);
+            clearDataBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to clear all data?')) {
+                    app.resetAllData();
+                    updateDebugInfo();
+                    updateBacklogDisplay();
+                    updateSprintSelector();
+                    sprintBoard.innerHTML = '<div class="board-empty"><i class="fas fa-clipboard-list"></i><p>No tasks found for this sprint</p></div>';
+                }
+            });
+            createSprintBtn.addEventListener('click', createTestSprint);
+            createTasksBtn.addEventListener('click', createTestTasks);
+            assignTasksBtn.addEventListener('click', assignTasksToSprint);
+            viewBoardBtn.addEventListener('click', viewSprintBoard);
+
+            // Initialize
+            updateDebugInfo();
+            updateBacklogDisplay();
+            updateSprintSelector();
+        });
+    </script>
+</body>
+</html>

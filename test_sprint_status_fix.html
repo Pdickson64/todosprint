@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprint Status Fix Test</title>
+    <script src="app.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 3px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        button {
+            padding: 8px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .run-btn {
+            background-color: #007bff;
+            color: white;
+        }
+        .clear-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sprint Status Fix Test</h1>
+    <p>This test verifies that tasks get the correct initial status when created with or without sprint assignments.</p>
+    
+    <div class="test-section">
+        <h2>Test 1: Create task without sprint assignment</h2>
+        <p>Expected: Task should have status 'backlog'</p>
+        <button class="run-btn" onclick="testTaskWithoutSprint()">Run Test</button>
+        <div id="test1-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: Create task with sprint assignment</h2>
+        <p>Expected: Task should have status 'todo'</p>
+        <button class="run-btn" onclick="testTaskWithSprint()">Run Test</button>
+        <div id="test2-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: Create subtask without sprint assignment</h2>
+        <p>Expected: Subtask should have status 'backlog'</p>
+        <button class="run-btn" onclick="testSubtaskWithoutSprint()">Run Test</button>
+        <div id="test3-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 4: Create subtask with sprint assignment</h2>
+        <p>Expected: Subtask should have status 'todo'</p>
+        <button class="run-btn" onclick="testSubtaskWithSprint()">Run Test</button>
+        <div id="test4-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 5: Assign existing task to sprint</h2>
+        <p>Expected: Task should have status 'todo' after assignment</p>
+        <button class="run-btn" onclick="testAssignTaskToSprint()">Run Test</button>
+        <div id="test5-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Control</h2>
+        <button class="clear-btn" onclick="clearAllTests()">Clear All Tests</button>
+        <button class="clear-btn" onclick="clearData()">Clear All Data</button>
+    </div>
+
+    <script>
+        // Initialize the app
+        let app;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            app = new SprintTodoApp();
+            
+            // Create a test sprint
+            const testSprint = app.createSprint({
+                name: 'Test Sprint',
+                startDate: '2025-01-01',
+                endDate: '2025-01-14',
+                duration: 14
+            });
+            
+            console.log('Test sprint created:', testSprint);
+        });
+        
+        function showResult(testId, message, isSuccess) {
+            const resultDiv = document.getElementById(`test${testId}-result`);
+            resultDiv.innerHTML = `<div class="test-result ${isSuccess ? 'success' : 'error'}">${message}</div>`;
+        }
+        
+        function testTaskWithoutSprint() {
+            try {
+                const task = app.createTask({
+                    title: 'Test Task Without Sprint',
+                    description: 'This task should have backlog status',
+                    points: 3,
+                    priority: 'medium'
+                });
+                
+                const isSuccess = task && task.status === 'backlog';
+                const message = isSuccess ? 
+                    `✓ Task created successfully with status: ${task.status}` : 
+                    `✗ Task created with wrong status: ${task.status}`;
+                
+                showResult(1, message, isSuccess);
+            } catch (error) {
+                showResult(1, `✗ Error: ${error.message}`, false);
+            }
+        }
+        
+        function testTaskWithSprint() {
+            try {
+                const sprint = app.sprints[0]; // Get the test sprint we created
+                const task = app.createTask({
+                    title: 'Test Task With Sprint',
+                    description: 'This task should have todo status',
+                    points: 5,
+                    priority: 'high',
+                    sprintId: sprint.id
+                });
+                
+                const isSuccess = task && task.status === 'todo' && task.sprintId === sprint.id;
+                const message = isSuccess ? 
+                    `✓ Task created successfully with status: ${task.status} and sprint: ${sprint.name}` : 
+                    `✗ Task created with wrong status: ${task.status} or sprint: ${task.sprintId}`;
+                
+                showResult(2, message, isSuccess);
+            } catch (error) {
+                showResult(2, `✗ Error: ${error.message}`, false);
+            }
+        }
+        
+        function testSubtaskWithoutSprint() {
+            try {
+                // First create a parent task
+                const parentTask = app.createTask({
+                    title: 'Parent Task',
+                    description: 'Parent for subtask test',
+                    points: 2
+                });
+                
+                // Create subtask without sprint
+                const subtask = app.createSubtask(parentTask.id, {
+                    title: 'Test Subtask Without Sprint',
+                    description: 'This subtask should have backlog status',
+                    points: 1
+                });
+                
+                const isSuccess = subtask && subtask.status === 'backlog';
+                const message = isSuccess ? 
+                    `✓ Subtask created successfully with status: ${subtask.status}` : 
+                    `✗ Subtask created with wrong status: ${subtask.status}`;
+                
+                showResult(3, message, isSuccess);
+            } catch (error) {
+                showResult(3, `✗ Error: ${error.message}`, false);
+            }
+        }
+        
+        function testSubtaskWithSprint() {
+            try {
+                const sprint = app.sprints[0]; // Get the test sprint
+                // First create a parent task
+                const parentTask = app.createTask({
+                    title: 'Parent Task With Sprint',
+                    description: 'Parent for sprint subtask test',
+                    points: 3
+                });
+                
+                // Create subtask with sprint
+                const subtask = app.createSubtask(parentTask.id, {
+                    title: 'Test Subtask With Sprint',
+                    description: 'This subtask should have todo status',
+                    points: 2,
+                    sprintId: sprint.id
+                });
+                
+                const isSuccess = subtask && subtask.status === 'todo' && subtask.sprintId === sprint.id;
+                const message = isSuccess ? 
+                    `✓ Subtask created successfully with status: ${subtask.status} and sprint: ${sprint.name}` : 
+                    `✗ Subtask created with wrong status: ${subtask.status} or sprint: ${subtask.sprintId}`;
+                
+                showResult(4, message, isSuccess);
+            } catch (error) {
+                showResult(4, `✗ Error: ${error.message}`, false);
+            }
+        }
+        
+        function testAssignTaskToSprint() {
+            try {
+                // Create task without sprint first
+                const task = app.createTask({
+                    title: 'Task to be Assigned',
+                    description: 'This task will be assigned to a sprint',
+                    points: 4
+                });
+                
+                const sprint = app.sprints[0]; // Get the test sprint
+                
+                // Assign task to sprint
+                app.assignTaskToSprint(task.id, sprint.id);
+                
+                // Refresh task data
+                const updatedTask = app.getTask(task.id);
+                
+                const isSuccess = updatedTask && updatedTask.status === 'todo' && updatedTask.sprintId === sprint.id;
+                const message = isSuccess ? 
+                    `✓ Task assigned successfully with status: ${updatedTask.status} and sprint: ${sprint.name}` : 
+                    `✗ Task assigned with wrong status: ${updatedTask.status} or sprint: ${updatedTask.sprintId}`;
+                
+                showResult(5, message, isSuccess);
+            } catch (error) {
+                showResult(5, `✗ Error: ${error.message}`, false);
+            }
+        }
+        
+        function clearAllTests() {
+            for (let i = 1; i <= 5; i++) {
+                document.getElementById(`test${i}-result`).innerHTML = '';
+            }
+        }
+        
+        function clearData() {
+            if (confirm('Are you sure you want to clear all test data?')) {
+                app.tasks = [];
+                app.sprints = [];
+                app.folders = [];
+                app.boardStatuses = [];
+                app.saveData();
+                app.render();
+                clearAllTests();
+                alert('All data cleared successfully!');
+            }
+        }
+    </script>
+</body>
+</html>

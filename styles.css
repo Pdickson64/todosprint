@@ -90,6 +90,21 @@ body {
     color: white;
 }
 
+.nav-divider {
+    width: 1px;
+    height: 24px;
+    background-color: #ddd;
+    margin: 0 0.5rem;
+}
+
+.reset-btn {
+    color: var(--danger-color);
+}
+
+.reset-btn:hover {
+    background-color: rgba(231, 76, 60, 0.1);
+}
+
 .user-actions {
     display: flex;
     gap: 0.5rem;
