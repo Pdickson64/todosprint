@@ -13,6 +13,7 @@ function SprintTodoApp() {
         this.currentSprint = null;
         this.draggedElement = null;
         this.draggedTask = null;
+        this.draggedIndex = -1;
         
         // Chart instances
         this.burnupChart = null;
@@ -110,8 +111,8 @@ function SprintTodoApp() {
         // Set up drag and drop
         this.setupDragAndDrop();
         
-        // Set up backlog drag and drop
-        this.setupBacklogDragAndDrop();
+        // Set up backlog drag and drop for task table
+        this.setupBacklogTaskTableDragAndDrop();
         
         // Set up context menu
         this.setupContextMenu();
@@ -166,6 +167,24 @@ function SprintTodoApp() {
             // Load default statuses if none saved
             this.boardStatuses = this.getDefaultBoardStatuses();
         }
+        
+        console.log('Board statuses loaded:', this.boardStatuses);
+    }
+    
+    SprintTodoApp.prototype.getDefaultBoardStatuses = function() {
+        const defaultStatuses = [
+            { id: 'todo', name: 'To Do', color: '#6c757d' },
+            { id: 'in-progress', name: 'In Progress', color: '#007bff' },
+            { id: 'review', name: 'Review', color: '#ffc107' },
+            { id: 'done', name: 'Done', color: '#28a745' }
+        ];
+        console.log('Default board statuses:', defaultStatuses);
+        return defaultStatuses;
+    }
+    
+    SprintTodoApp.prototype.getBoardStatuses = function() {
+        console.log('getBoardStatuses called, returning:', this.boardStatuses);
+        return this.boardStatuses;
     }
 
     SprintTodoApp.prototype.saveData = function() {
@@ -406,13 +425,19 @@ function SprintTodoApp() {
     
     // Add method to get all tasks as flat list for sprint boards (no subtask nesting)
     SprintTodoApp.prototype.getFlatTasksForSprintBoard = function(sprintId) {
+        console.log('getFlatTasksForSprintBoard called with sprintId:', sprintId);
+        
         const mainTasks = this.getTasksBySprint(sprintId);
+        console.log('Main tasks found by sprint:', mainTasks.length);
+        console.log('Main tasks:', mainTasks.map(t => ({ id: t.id, title: t.title, status: t.status, sprintId: t.sprintId })));
+        
         const allTasks = [];
         
         // Add main tasks and their subtasks as individual items
         mainTasks.forEach(task => {
             // Add the main task
             allTasks.push(task);
+            console.log('Added main task:', task.id, task.title, 'with status:', task.status);
             
             // Add subtasks as individual tasks (flattened) - ONLY if they belong to the same sprint
             if (task.subtasks && task.subtasks.length > 0) {
@@ -426,23 +451,27 @@ function SprintTodoApp() {
                         subtaskCopy.isSubtask = true;
                         subtaskCopy.parentId = task.id;
                         allTasks.push(subtaskCopy);
+                        console.log('Added subtask:', subtaskCopy.id, subtaskCopy.title, 'with status:', subtaskCopy.status);
                     }
                 });
             }
         });
         
+        console.log('Total tasks returned:', allTasks.length);
+        console.log('All tasks with statuses:', allTasks.map(t => ({ id: t.id, title: t.title, status: t.status })));
+        
         return allTasks;
     }
 
-    // Add method to get parent tasks for a folder (subtasks will be handled by createTaskElement)
+    // Add method to get all tasks (including subtasks) for a folder
     SprintTodoApp.prototype.getTasksAndSubtasksByFolder = function(folderId) {
         // Get all tasks for the folder
         const folderTasks = this.getTasksByFolder(folderId);
         
-        // Filter out subtasks (tasks that have a parentTaskId) and completed tasks
-        const parentTasks = folderTasks.filter(task => !task.parentTaskId && task.status !== 'done');
+        // Filter out completed tasks, but include both parent tasks and subtasks
+        const activeTasks = folderTasks.filter(task => task.status !== 'done');
         
-        return parentTasks;
+        return activeTasks;
     }
     
     // Add method to get only parent tasks for a folder (no subtask handling)
@@ -1192,6 +1221,8 @@ function SprintTodoApp() {
         // Add "All Tasks" folder
         const allTasksFolder = document.createElement('div');
         allTasksFolder.className = 'folder-item active';
+        allTasksFolder.dataset.folderId = 'all';
+        allTasksFolder.draggable = true;
         allTasksFolder.innerHTML = `
             <div class="folder-header" onclick="app.selectFolder('all')">
                 <i class="fas fa-tasks"></i>
@@ -1210,6 +1241,7 @@ function SprintTodoApp() {
             const folderElement = document.createElement('div');
             folderElement.className = 'folder-item';
             folderElement.dataset.folderId = folder.id;
+            folderElement.draggable = true;
             folderElement.innerHTML = `
                 <div class="folder-header" onclick="app.selectFolder('${folder.id}')">
                     <i class="fas fa-folder"></i>
@@ -1223,6 +1255,9 @@ function SprintTodoApp() {
                 folderSidebar.appendChild(folderElement);
             }
         });
+        
+        // Set up folder drag and drop
+        this.setupFolderDragAndDrop();
     }
 
     SprintTodoApp.prototype.renderTasks = function(folderId) {
@@ -1240,8 +1275,22 @@ function SprintTodoApp() {
             tasks = this.getTasksAndSubtasksByFolder(folderId);
         }
         
-        // Sort tasks by creation date (newest first)
-        tasks.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        // Sort tasks - preserve manual order if it exists, otherwise sort by creation date
+        tasks.sort((a, b) => {
+            // If both tasks have manual order, use that
+            if (a.manualOrder !== undefined && b.manualOrder !== undefined) {
+                return a.manualOrder - b.manualOrder;
+            }
+            // If only one has manual order, prioritize it
+            if (a.manualOrder !== undefined) {
+                return -1;
+            }
+            if (b.manualOrder !== undefined) {
+                return 1;
+            }
+            // Otherwise sort by creation date (newest first)
+            return new Date(b.createdAt) - new Date(a.createdAt);
+        });
         
         // Update current folder title
         const currentFolderTitle = document.getElementById('current-folder-title');
@@ -1267,7 +1316,12 @@ function SprintTodoApp() {
             return;
         }
         
-        tasks.forEach(task => {
+        // Separate parent tasks and subtasks to avoid duplication
+        const parentTasks = tasks.filter(task => !task.parentTaskId);
+        const subtasks = tasks.filter(task => task.parentTaskId);
+        
+        // Render parent tasks first
+        parentTasks.forEach(task => {
             const taskRow = this.createTaskTableRow(task);
             tableBody.appendChild(taskRow);
             
@@ -1276,10 +1330,34 @@ function SprintTodoApp() {
                 task.subtasks.forEach(subtask => {
                     const fullSubtask = this.getTask(subtask.id);
                     if (fullSubtask) {
+                        console.log('Creating subtask row for:', {
+                            subtaskId: fullSubtask.id,
+                            subtaskTitle: fullSubtask.title,
+                            parentTaskId: task.id,
+                            parentTaskTitle: task.title,
+                            isSubtask: fullSubtask.parentTaskId || fullSubtask.isSubtask
+                        });
                         const subtaskRow = this.createSubtaskTableRow(fullSubtask, task.id);
                         tableBody.appendChild(subtaskRow);
                     }
                 });
+            }
+        });
+        
+        // Render standalone subtasks (subtasks that are not nested under a parent)
+        subtasks.forEach(subtask => {
+            const parentTask = this.getTask(subtask.parentTaskId);
+            // Only render standalone subtasks if the parent is not expanded or doesn't exist
+            if (!parentTask || parentTask.expanded === false) {
+                console.log('Creating standalone subtask row for:', {
+                    subtaskId: subtask.id,
+                    subtaskTitle: subtask.title,
+                    parentTaskId: subtask.parentTaskId,
+                    parentTaskTitle: parentTask ? parentTask.title : 'null',
+                    isSubtask: subtask.parentTaskId || subtask.isSubtask
+                });
+                const subtaskRow = this.createSubtaskTableRow(subtask, subtask.parentTaskId);
+                tableBody.appendChild(subtaskRow);
             }
         });
     }
@@ -1288,6 +1366,7 @@ function SprintTodoApp() {
         const row = document.createElement('div');
         row.className = 'task-table-row';
         row.dataset.taskId = task.id;
+        // Make the entire row draggable but prevent drag on interactive elements
         
         // Get available sprints for dropdown
         const availableSprints = this.sprints.filter(sprint =>
@@ -1345,8 +1424,16 @@ function SprintTodoApp() {
             </button>
         ` : '';
         
+        // Add drag handle indicator for visual feedback
+        const dragHandle = task.parentTaskId ? '' : `
+            <div class="drag-handle-indicator" title="Drag to reorder">
+                <i class="fas fa-grip-vertical"></i>
+            </div>
+        `;
+        
         row.innerHTML = `
             <div class="task-col-title">
+                ${dragHandle}
                 ${checkbox}
                 ${subtaskToggle}
                 <span class="task-title-text">${task.title}</span>
@@ -1374,14 +1461,65 @@ function SprintTodoApp() {
             </div>
         `;
         
+        // Make the entire row draggable but prevent drag on interactive elements
+        row.draggable = true;
+        
+        // Prevent drag on interactive elements
+        row.addEventListener('dragstart', (e) => {
+            // Check if the drag started from an interactive element
+            const interactiveElements = e.target.closest('select, button, input[type="checkbox"]');
+            if (interactiveElements) {
+                e.preventDefault();
+                return;
+            }
+            
+            const taskRow = row;
+            console.log('Task row drag start event:', {
+                target: e.target,
+                taskRow: taskRow,
+                hasTaskId: taskRow && taskRow.dataset.taskId,
+                isSubtask: taskRow && taskRow.classList.contains('subtask-row'),
+                taskRowHtml: taskRow ? taskRow.outerHTML.substring(0, 200) : 'null'
+            });
+            
+            if (taskRow && taskRow.dataset.taskId) {
+                app.draggedElement = taskRow;
+                app.draggedTask = app.getTask(taskRow.dataset.taskId);
+                
+                // Find the actual index in the tasks array, not just DOM position
+                app.draggedIndex = app.tasks.findIndex(t => t.id === taskRow.dataset.taskId);
+                
+                console.log('Drag started from task row:', {
+                    taskId: taskRow.dataset.taskId,
+                    taskTitle: app.draggedTask ? app.draggedTask.title : 'null',
+                    draggedIndex: app.draggedIndex,
+                    domIndex: Array.from(taskTableBody.children).indexOf(taskRow),
+                    isSubtask: taskRow.classList.contains('subtask-row')
+                });
+                
+                taskRow.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', taskRow.innerHTML);
+            }
+        });
+        
         return row;
     }
 
     SprintTodoApp.prototype.createSubtaskTableRow = function(subtask, parentTaskId) {
+        console.log('createSubtaskTableRow called with:', {
+            subtaskId: subtask.id,
+            subtaskTitle: subtask.title,
+            parentTaskId: parentTaskId,
+            isSubtask: subtask.parentTaskId || subtask.isSubtask,
+            hasDragHandle: true
+        });
+        
         const row = document.createElement('div');
         row.className = 'task-table-row subtask-row';
         row.dataset.taskId = subtask.id;
         row.dataset.parentTaskId = parentTaskId;
+        // Don't make the entire row draggable - add a drag handle instead
         
         // Get available sprints for dropdown
         const availableSprints = this.sprints.filter(sprint =>
@@ -1432,8 +1570,16 @@ function SprintTodoApp() {
                     onchange="app.toggleSubtaskComplete('${parentTaskId}', '${subtask.id}')">
         `;
         
+        // Add drag handle to the title area
+        const dragHandle = `
+            <div class="drag-handle" draggable="true" title="Drag to reorder">
+                <i class="fas fa-grip-vertical"></i>
+            </div>
+        `;
+        
         row.innerHTML = `
             <div class="task-col-title">
+                ${dragHandle}
                 ${checkbox}
                 <span class="task-title-text">${subtask.title}</span>
                 <span class="subtask-indicator">Subtask</span>
@@ -1454,6 +1600,49 @@ function SprintTodoApp() {
                 </button>
             </div>
         `;
+        
+        // Make the entire subtask row draggable but prevent drag on interactive elements
+        row.draggable = true;
+        
+        // Prevent drag on interactive elements
+        row.addEventListener('dragstart', (e) => {
+            // Check if the drag started from an interactive element
+            const interactiveElements = e.target.closest('select, button, input[type="checkbox"]');
+            if (interactiveElements) {
+                e.preventDefault();
+                return;
+            }
+            
+            const taskRow = row;
+            console.log('Subtask row drag start event:', {
+                target: e.target,
+                taskRow: taskRow,
+                hasTaskId: taskRow && taskRow.dataset.taskId,
+                isSubtask: taskRow && taskRow.classList.contains('subtask-row'),
+                taskRowHtml: taskRow ? taskRow.outerHTML.substring(0, 200) : 'null'
+            });
+            
+            if (taskRow && taskRow.dataset.taskId) {
+                app.draggedElement = taskRow;
+                app.draggedTask = app.getTask(taskRow.dataset.taskId);
+                
+                // Find the actual index in the tasks array, not just DOM position
+                app.draggedIndex = app.tasks.findIndex(t => t.id === taskRow.dataset.taskId);
+                
+                console.log('Subtask drag started from row:', {
+                    taskId: taskRow.dataset.taskId,
+                    taskTitle: app.draggedTask ? app.draggedTask.title : 'null',
+                    draggedIndex: app.draggedIndex,
+                    domIndex: Array.from(taskTableBody.children).indexOf(taskRow),
+                    isSubtask: taskRow.classList.contains('subtask-row'),
+                    parentTaskId: taskRow.dataset.parentTaskId
+                });
+                
+                taskRow.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', taskRow.innerHTML);
+            }
+        });
         
         return row;
     }
@@ -1640,6 +1829,8 @@ function SprintTodoApp() {
 
     SprintTodoApp.prototype.renderSprints = function() {
         const container = document.getElementById('sprints-container');
+        if (!container) return;
+        
         container.innerHTML = '';
         
         this.sprints.forEach(sprint => {
@@ -1754,11 +1945,15 @@ function SprintTodoApp() {
         console.log('Tasks found:', tasks.length);
         console.log('Tasks with subtasks:', tasks.filter(t => t.subtasks && t.subtasks.length > 0).length);
         
+        // Debug: Log all tasks and their statuses
+        console.log('All tasks in sprint:', tasks.map(t => ({ id: t.id, title: t.title, status: t.status })));
+        
         statuses.forEach(status => {
             const statusTasks = tasks.filter(task => task.status === status.id);
             const totalPoints = statusTasks.reduce((sum, task) => sum + task.points, 0);
             
-            console.log(`Status ${status.name}:`, statusTasks.length, 'tasks');
+            console.log(`Status ${status.name} (${status.id}):`, statusTasks.length, 'tasks');
+            console.log('Tasks in this status:', statusTasks.map(t => ({ id: t.id, title: t.title, status: t.status })));
             
             const column = document.createElement('div');
             column.className = 'board-column';
@@ -2328,6 +2523,381 @@ function SprintTodoApp() {
         });
     }
 
+    // Backlog Task Table Drag and Drop
+    SprintTodoApp.prototype.setupBacklogTaskTableDragAndDrop = function() {
+        const taskTableBody = document.getElementById('task-table-body');
+        if (!taskTableBody) return;
+
+        // Reset instance variables
+        this.draggedElement = null;
+        this.draggedTask = null;
+        this.draggedIndex = -1;
+
+        // Handle drag start
+        taskTableBody.addEventListener('dragstart', (e) => {
+            const taskRow = e.target.closest('.task-table-row');
+            console.log('Drag start event:', {
+                target: e.target,
+                taskRow: taskRow,
+                hasTaskId: taskRow && taskRow.dataset.taskId,
+                isSubtask: taskRow && taskRow.classList.contains('subtask-row'),
+                taskRowHtml: taskRow ? taskRow.outerHTML.substring(0, 200) : 'null'
+            });
+            
+            if (taskRow && taskRow.dataset.taskId) {
+                this.draggedElement = taskRow;
+                this.draggedTask = this.getTask(taskRow.dataset.taskId);
+                
+                // Find the actual index in the tasks array, not just DOM position
+                this.draggedIndex = this.tasks.findIndex(t => t.id === taskRow.dataset.taskId);
+                
+                console.log('Drag started:', {
+                    taskId: taskRow.dataset.taskId,
+                    taskTitle: this.draggedTask ? this.draggedTask.title : 'null',
+                    draggedIndex: this.draggedIndex,
+                    domIndex: Array.from(taskTableBody.children).indexOf(taskRow),
+                    isSubtask: taskRow.classList.contains('subtask-row')
+                });
+                
+                taskRow.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', taskRow.innerHTML);
+            } else {
+                console.log('Drag start failed - no valid task row found');
+            }
+        });
+
+        // Handle drag end
+        taskTableBody.addEventListener('dragend', (e) => {
+            if (this.draggedElement) {
+                this.draggedElement.classList.remove('dragging');
+                this.draggedElement = null;
+                this.draggedTask = null;
+                this.draggedIndex = -1;
+            }
+            // Clear all drag over styles
+            taskTableBody.querySelectorAll('.drag-over').forEach(row => {
+                row.classList.remove('drag-over');
+            });
+        });
+
+        // Handle drag over
+        taskTableBody.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            const taskRow = e.target.closest('.task-table-row');
+            if (taskRow && taskRow !== this.draggedElement && taskRow.dataset.taskId) {
+                const rect = taskRow.getBoundingClientRect();
+                const midpoint = rect.top + rect.height / 2;
+                
+                // Clear previous drag over styles
+                taskTableBody.querySelectorAll('.drag-over').forEach(row => {
+                    row.classList.remove('drag-over');
+                });
+
+                // Add drag over style to current target
+                taskRow.classList.add('drag-over');
+
+                // Show visual feedback for drop position
+                if (e.clientY < midpoint) {
+                    taskRow.style.borderTop = '2px solid var(--primary-color)';
+                    taskRow.style.borderBottom = 'none';
+                } else {
+                    taskRow.style.borderTop = 'none';
+                    taskRow.style.borderBottom = '2px solid var(--primary-color)';
+                }
+            }
+        });
+
+        // Handle drag leave
+        taskTableBody.addEventListener('dragleave', (e) => {
+            const taskRow = e.target.closest('.task-table-row');
+            if (taskRow) {
+                taskRow.classList.remove('drag-over');
+                taskRow.style.borderTop = 'none';
+                taskRow.style.borderBottom = 'none';
+            }
+        });
+
+        // Handle drop
+        taskTableBody.addEventListener('drop', (e) => {
+            e.preventDefault();
+            
+            const taskRow = e.target.closest('.task-table-row');
+            console.log('Drop event:', {
+                hasTaskRow: !!taskRow,
+                taskRowId: taskRow ? taskRow.dataset.taskId : 'null',
+                draggedElementId: this.draggedElement ? this.draggedElement.dataset.taskId : 'null',
+                draggedTask: this.draggedTask ? this.draggedTask.title : 'null',
+                targetTask: taskRow ? this.getTask(taskRow.dataset.taskId)?.title : 'null',
+                isDraggedSubtask: this.draggedElement && this.draggedElement.classList.contains('subtask-row'),
+                isTargetSubtask: taskRow && taskRow.classList.contains('subtask-row')
+            });
+            
+            if (taskRow && taskRow !== this.draggedElement && taskRow.dataset.taskId) {
+                const targetTask = this.getTask(taskRow.dataset.taskId);
+                // Find the actual index in the tasks array, not just DOM position
+                const targetIndex = this.tasks.findIndex(t => t.id === taskRow.dataset.taskId);
+                
+                if (targetTask && this.draggedTask) {
+                    const rect = taskRow.getBoundingClientRect();
+                    const midpoint = rect.top + rect.height / 2;
+                    const dropBefore = e.clientY < midpoint;
+                    
+                    console.log('Reordering tasks:', {
+                        draggedTask: this.draggedTask.title,
+                        targetTask: targetTask.title,
+                        dropBefore: dropBefore,
+                        draggedIndex: this.draggedIndex,
+                        targetIndex: targetIndex,
+                        domTargetIndex: Array.from(taskTableBody.children).indexOf(taskRow),
+                        isDraggedSubtask: this.draggedElement.classList.contains('subtask-row'),
+                        isTargetSubtask: taskRow.classList.contains('subtask-row')
+                    });
+                    
+                    // Reorder tasks
+                    this.reorderBacklogTasks(this.draggedTask, targetTask, dropBefore);
+                }
+            } else {
+                console.log('Drop failed - invalid target or same element');
+            }
+            
+            // Clear all drag styles
+            taskTableBody.querySelectorAll('.drag-over').forEach(row => {
+                row.classList.remove('drag-over');
+            });
+            taskTableBody.querySelectorAll('.task-table-row').forEach(row => {
+                row.style.borderTop = 'none';
+                row.style.borderBottom = 'none';
+            });
+        });
+    }
+
+    SprintTodoApp.prototype.reorderBacklogTasks = function(draggedTask, targetTask, dropBefore) {
+        const draggedIndex = this.tasks.findIndex(t => t.id === draggedTask.id);
+        const targetIndex = this.tasks.findIndex(t => t.id === targetTask.id);
+        
+        console.log('reorderBacklogTasks called:', {
+            draggedTask: draggedTask.title,
+            isSubtask: draggedTask.parentTaskId || draggedTask.isSubtask,
+            targetTask: targetTask.title,
+            isTargetSubtask: targetTask.parentTaskId || targetTask.isSubtask,
+            dropBefore: dropBefore,
+            draggedIndex: draggedIndex,
+            targetIndex: targetIndex,
+            totalTasks: this.tasks.length
+        });
+        
+        if (draggedIndex === -1 || targetIndex === -1) {
+            console.error('Invalid indices:', { draggedIndex, targetIndex });
+            return;
+        }
+        
+        // Handle subtask reordering specially
+        const isDraggedSubtask = draggedTask.parentTaskId || draggedTask.isSubtask;
+        const isTargetSubtask = targetTask.parentTaskId || targetTask.isSubtask;
+        
+        if (isDraggedSubtask && isTargetSubtask) {
+            // Both are subtasks - reorder within subtasks array of parent
+            const draggedParentId = draggedTask.parentTaskId;
+            const targetParentId = targetTask.parentTaskId;
+            
+            if (draggedParentId === targetParentId) {
+                // Same parent - reorder within parent's subtasks
+                const parentTask = this.getTask(draggedParentId);
+                if (parentTask && parentTask.subtasks) {
+                    const draggedSubtaskIndex = parentTask.subtasks.findIndex(st => st.id === draggedTask.id);
+                    const targetSubtaskIndex = parentTask.subtasks.findIndex(st => st.id === targetTask.id);
+                    
+                    if (draggedSubtaskIndex !== -1 && targetSubtaskIndex !== -1) {
+                        // Remove dragged subtask
+                        const [removedSubtask] = parentTask.subtasks.splice(draggedSubtaskIndex, 1);
+                        // Insert at new position
+                        const newSubtaskIndex = dropBefore ? targetSubtaskIndex : targetSubtaskIndex + (draggedSubtaskIndex < targetSubtaskIndex ? 0 : 1);
+                        parentTask.subtasks.splice(newSubtaskIndex, 0, removedSubtask);
+                        
+                        // Update manual order for subtasks to preserve the new ordering
+                        parentTask.subtasks.forEach((subtask, index) => {
+                            subtask.manualOrder = index;
+                        });
+                        
+                        console.log('Subtasks reordered within parent:', parentTask.title);
+                        this.saveData();
+                        this.refreshTaskTable();
+                        return;
+                    }
+                }
+            } else {
+                // Different parents - move subtask between parents
+                console.log('Moving subtask between different parents - not implemented yet');
+                this.refreshTaskTable();
+                return;
+            }
+        } else if (!isDraggedSubtask && !isTargetSubtask) {
+            // Both are parent tasks - reorder in main tasks array
+            // Remove the dragged task from its current position
+            const [removedTask] = this.tasks.splice(draggedIndex, 1);
+            
+            // Insert it at the new position
+            const newIndex = dropBefore ? targetIndex : targetIndex + (draggedIndex < targetIndex ? 0 : 1);
+            this.tasks.splice(newIndex, 0, removedTask);
+            
+            // Update manual order for all tasks to preserve the new ordering
+            this.tasks.forEach((task, index) => {
+                task.manualOrder = index;
+            });
+            
+            console.log('Parent tasks reordered. New order:', this.tasks.map(t => t.title));
+        } else {
+            // Mixed - one is subtask, one is parent
+            console.log('Mixed drag and drop (subtask with parent) - not implemented yet');
+            this.refreshTaskTable();
+            return;
+        }
+        
+        this.saveData();
+        this.refreshTaskTable();
+    }
+    
+    SprintTodoApp.prototype.refreshTaskTable = function() {
+        // Refresh the task table
+        const activeFolder = document.querySelector('.folder-item.active');
+        if (activeFolder) {
+            const folderId = activeFolder.dataset.folderId || 'all';
+            this.renderTasks(folderId);
+        }
+    }
+
+    // Folder Drag and Drop
+    SprintTodoApp.prototype.setupFolderDragAndDrop = function() {
+        const folderSidebar = document.querySelector('.folder-sidebar');
+        if (!folderSidebar) return;
+
+        let draggedElement = null;
+        let draggedFolderId = null;
+
+        // Handle drag start
+        folderSidebar.addEventListener('dragstart', (e) => {
+            const folderItem = e.target.closest('.folder-item');
+            if (folderItem && folderItem.dataset.folderId) {
+                draggedElement = folderItem;
+                draggedFolderId = folderItem.dataset.folderId;
+                folderItem.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', folderItem.innerHTML);
+            }
+        });
+
+        // Handle drag end
+        folderSidebar.addEventListener('dragend', (e) => {
+            if (draggedElement) {
+                draggedElement.classList.remove('dragging');
+                draggedElement = null;
+                draggedFolderId = null;
+            }
+            // Clear all drag over styles
+            folderSidebar.querySelectorAll('.drag-over').forEach(folder => {
+                folder.classList.remove('drag-over');
+            });
+        });
+
+        // Handle drag over
+        folderSidebar.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            const folderItem = e.target.closest('.folder-item');
+            if (folderItem && folderItem !== draggedElement && folderItem.dataset.folderId) {
+                const rect = folderItem.getBoundingClientRect();
+                const midpoint = rect.top + rect.height / 2;
+                
+                // Clear previous drag over styles
+                folderSidebar.querySelectorAll('.drag-over').forEach(folder => {
+                    folder.classList.remove('drag-over');
+                });
+
+                // Add drag over style to current target
+                folderItem.classList.add('drag-over');
+
+                // Show visual feedback for drop position
+                if (e.clientY < midpoint) {
+                    folderItem.style.borderTop = '2px solid var(--primary-color)';
+                    folderItem.style.borderBottom = 'none';
+                } else {
+                    folderItem.style.borderTop = 'none';
+                    folderItem.style.borderBottom = '2px solid var(--primary-color)';
+                }
+            }
+        });
+
+        // Handle drag leave
+        folderSidebar.addEventListener('dragleave', (e) => {
+            const folderItem = e.target.closest('.folder-item');
+            if (folderItem) {
+                folderItem.classList.remove('drag-over');
+                folderItem.style.borderTop = 'none';
+                folderItem.style.borderBottom = 'none';
+            }
+        });
+
+        // Handle drop
+        folderSidebar.addEventListener('drop', (e) => {
+            e.preventDefault();
+            
+            const folderItem = e.target.closest('.folder-item');
+            if (folderItem && folderItem !== draggedElement && folderItem.dataset.folderId) {
+                const targetFolderId = folderItem.dataset.folderId;
+                const rect = folderItem.getBoundingClientRect();
+                const midpoint = rect.top + rect.height / 2;
+                const dropBefore = e.clientY < midpoint;
+                
+                // Reorder folders
+                this.reorderFolders(draggedFolderId, targetFolderId, dropBefore);
+            }
+            
+            // Clear all drag styles
+            folderSidebar.querySelectorAll('.drag-over').forEach(folder => {
+                folder.classList.remove('drag-over');
+            });
+            folderSidebar.querySelectorAll('.folder-item').forEach(folder => {
+                folder.style.borderTop = 'none';
+                folder.style.borderBottom = 'none';
+            });
+        });
+    }
+
+    SprintTodoApp.prototype.reorderFolders = function(draggedFolderId, targetFolderId, dropBefore) {
+        // Handle special case for "All Tasks" folder (always stays at top)
+        if (targetFolderId === 'all') {
+            return; // Don't allow reordering above "All Tasks"
+        }
+
+        const draggedIndex = this.folders.findIndex(f => f.id === draggedFolderId);
+        const targetIndex = this.folders.findIndex(f => f.id === targetFolderId);
+        
+        if (draggedIndex === -1 || targetIndex === -1) return;
+        
+        // Remove the dragged folder from its current position
+        const [removedFolder] = this.folders.splice(draggedIndex, 1);
+        
+        // Insert it at the new position
+        const newIndex = dropBefore ? targetIndex : targetIndex + (draggedIndex < targetIndex ? 0 : 1);
+        this.folders.splice(newIndex, 0, removedFolder);
+        
+        this.saveData();
+        
+        // Refresh the folder sidebar
+        this.renderFolders();
+        
+        // Refresh tasks to maintain current view
+        const activeFolder = document.querySelector('.folder-item.active');
+        if (activeFolder) {
+            const folderId = activeFolder.dataset.folderId || 'all';
+            this.renderTasks(folderId);
+        }
+    }
+
     // Utility Methods
     SprintTodoApp.prototype.updateSprintStatuses = function() {
         const today = new Date();
@@ -2440,168 +3010,6 @@ function SprintTodoApp() {
         this.showNotification('Task created successfully!');
     }
 
-    SprintTodoApp.prototype.setupBacklogDragAndDrop = function() {
-        // Set up drag and drop for the backlog
-        document.addEventListener('dragstart', (e) => {
-            if (e.target.classList.contains('task-item')) {
-                this.draggedTaskElement = e.target;
-                this.draggedTask = this.getTask(e.target.dataset.taskId);
-                e.target.classList.add('dragging');
-                e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/html', e.target.innerHTML);
-            }
-        });
-
-        document.addEventListener('dragend', (e) => {
-            if (e.target.classList.contains('task-item')) {
-                e.target.classList.remove('dragging');
-                this.clearDragOverStyles();
-            }
-        });
-
-        document.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            const taskElement = e.target.closest('.task-item');
-            const folderContent = e.target.closest('.folder-content');
-            
-            if (taskElement && this.draggedTaskElement !== taskElement) {
-                this.handleDragOverTask(taskElement, e);
-            } else if (folderContent) {
-                this.handleDragOverFolder(folderContent, e);
-            }
-        });
-
-        document.addEventListener('drop', (e) => {
-            e.preventDefault();
-            const taskElement = e.target.closest('.task-item');
-            const folderContent = e.target.closest('.folder-content');
-            
-            if (taskElement && this.draggedTaskElement !== taskElement) {
-                this.handleDropOnTask(taskElement, e);
-            } else if (folderContent) {
-                this.handleDropOnFolder(folderContent, e);
-            }
-        });
-
-        document.addEventListener('dragleave', (e) => {
-            const folderContent = e.target.closest('.folder-content');
-            if (folderContent && !folderContent.contains(e.relatedTarget)) {
-                folderContent.classList.remove('drag-over');
-            }
-        });
-    }
-
-    SprintTodoApp.prototype.handleDragOverTask = function(taskElement, e) {
-        const rect = taskElement.getBoundingClientRect();
-        const midpoint = rect.top + rect.height / 2;
-        
-        if (e.clientY < midpoint) {
-            taskElement.style.borderTop = '2px solid var(--primary-color)';
-            taskElement.style.borderBottom = 'none';
-        } else {
-            taskElement.style.borderTop = 'none';
-            taskElement.style.borderBottom = '2px solid var(--primary-color)';
-        }
-    }
-
-    SprintTodoApp.prototype.handleDragOverFolder = function(folderContent, e) {
-        folderContent.classList.add('drag-over');
-    }
-
-    SprintTodoApp.prototype.handleDropOnTask = function(taskElement, e) {
-        e.preventDefault();
-        
-        const rect = taskElement.getBoundingClientRect();
-        const midpoint = rect.top + rect.height / 2;
-        
-        // Determine if we're dropping before or after the target task
-        const dropBefore = e.clientY < midpoint;
-        
-        // Get the target task
-        const targetTask = this.getTask(taskElement.dataset.taskId);
-        
-        if (targetTask && this.draggedTask) {
-            // Reorder tasks within the same folder
-            if (targetTask.folderId === this.draggedTask.folderId) {
-                this.reorderTasks(this.draggedTask, targetTask, dropBefore);
-            }
-            // Move task to different folder
-            else {
-                this.moveTaskToFolder(this.draggedTask, targetTask.folderId);
-                // Then reorder within the new folder
-                this.reorderTasks(this.draggedTask, targetTask, dropBefore);
-            }
-        }
-        
-        this.clearDragOverStyles();
-        this.render();
-    }
-
-    SprintTodoApp.prototype.handleDropOnFolder = function(folderContent, e) {
-        e.preventDefault();
-        
-        // Get the folder ID from the folder content
-        const folderElement = folderContent.closest('.folder');
-        const folderId = folderElement.dataset.folderId;
-        
-        if (this.draggedTask && folderId) {
-            // Move task to the folder
-            this.moveTaskToFolder(this.draggedTask, folderId);
-            
-            // Add to the end of the folder
-            this.draggedTask.order = this.getTasksByFolder(folderId).length;
-        }
-        
-        this.clearDragOverStyles();
-        this.render();
-    }
-
-    SprintTodoApp.prototype.reorderTasks = function(draggedTask, targetTask, dropBefore) {
-        const draggedIndex = this.tasks.findIndex(t => t.id === draggedTask.id);
-        const targetIndex = this.tasks.findIndex(t => t.id === targetTask.id);
-        
-        if (draggedIndex === -1 || targetIndex === -1) return;
-        
-        // Remove the dragged task from its current position
-        const [removedTask] = this.tasks.splice(draggedIndex, 1);
-        
-        // Insert it at the new position
-        const newIndex = dropBefore ? targetIndex : targetIndex + (draggedIndex < targetIndex ? 0 : 1);
-        this.tasks.splice(newIndex, 0, removedTask);
-        
-        // Update the order property for all tasks in the same folder
-        const folderTasks = this.tasks.filter(t => t.folderId === draggedTask.folderId);
-        folderTasks.forEach((task, index) => {
-            task.order = index;
-        });
-        
-        this.saveData();
-    }
-
-    SprintTodoApp.prototype.moveTaskToFolder = function(task, newFolderId) {
-        const taskIndex = this.tasks.findIndex(t => t.id === task.id);
-        if (taskIndex !== -1) {
-            this.tasks[taskIndex].folderId = newFolderId;
-            
-            // Update order to be at the end of the new folder
-            const folderTasks = this.getTasksByFolder(newFolderId);
-            this.tasks[taskIndex].order = folderTasks.length;
-            
-            this.saveData();
-        }
-    }
-
-    SprintTodoApp.prototype.clearDragOverStyles = function() {
-        // Remove all drag over styles
-        document.querySelectorAll('.task-item').forEach(task => {
-            task.style.borderTop = 'none';
-            task.style.borderBottom = 'none';
-        });
-        
-        document.querySelectorAll('.folder-content').forEach(content => {
-            content.classList.remove('drag-over');
-        });
-    }
 
     SprintTodoApp.prototype.setupContextMenu = function() {
         const contextMenu = document.getElementById('context-menu');
@@ -2779,10 +3187,17 @@ function SprintTodoApp() {
     }
 
     SprintTodoApp.prototype.assignTaskToSprint = function(taskId, sprintId) {
+        console.log('assignTaskToSprint called:', { taskId, sprintId });
+        
         if (!taskId) return;
         
         const task = this.getTask(taskId);
-        if (!task) return;
+        if (!task) {
+            console.error('Task not found:', taskId);
+            return;
+        }
+        
+        console.log('Current task before update:', task);
         
         // Update task with new sprint assignment
         const updates = {
@@ -2790,7 +3205,10 @@ function SprintTodoApp() {
             status: sprintId ? 'todo' : 'backlog'
         };
         
-        this.updateTask(taskId, updates);
+        console.log('Updates to apply:', updates);
+        
+        const updatedTask = this.updateTask(taskId, updates);
+        console.log('Task after update:', updatedTask);
         
         // Show notification
         if (sprintId) {
@@ -2812,6 +3230,7 @@ function SprintTodoApp() {
         // Always refresh the sprint board if we have a current sprint
         // This ensures tasks appear on the board when assigned from backlog
         if (this.currentSprint) {
+            console.log('Refreshing sprint board for current sprint:', this.currentSprint.id);
             this.renderSprintBoard();
         }
     }

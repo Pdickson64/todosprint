@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subtask Drag and Drop Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .debug-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 300px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .debug-panel h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .debug-log {
+            font-family: monospace;
+            font-size: 12px;
+            background: #f5f5f5;
+            padding: 5px;
+            border-radius: 3px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .test-controls {
+            margin-bottom: 10px;
+        }
+        
+        .test-controls button {
+            margin-right: 5px;
+            padding: 5px 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        .test-controls button:hover {
+            background: #0056b3;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .status-working { background: #28a745; }
+        .status-error { background: #dc3545; }
+        .status-pending { background: #ffc107; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <i class="fas fa-tasks"></i>
+                <h1>Subtask Drag and Drop Test</h1>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Backlog View -->
+            <div id="backlog-view" class="view active">
+                <div class="backlog-header">
+                    <h2>Product Backlog</h2>
+                    <div class="backlog-actions">
+                        <button id="add-to-backlog-btn" class="btn-secondary">
+                            <i class="fas fa-plus"></i> Add Test Tasks
+                        </button>
+                    </div>
+                </div>
+                <div class="backlog-layout">
+                    <!-- Sidebar for folders -->
+                    <div class="folder-sidebar" id="folder-sidebar">
+                        <div class="sidebar-header">
+                            <h3>Folders</h3>
+                        </div>
+                        <div class="folder-list" id="folder-list">
+                            <!-- Folders will be dynamically added here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Main content area for tasks -->
+                    <div class="task-main-content" id="task-main-content">
+                        <div class="task-header">
+                            <h3 id="current-folder-title">All Tasks</h3>
+                        </div>
+                        <div class="task-table-container" id="task-table-container">
+                            <div class="task-table-header">
+                                <div class="task-col-title">Task</div>
+                                <div class="task-col-points">Points</div>
+                                <div class="task-col-priority">Priority</div>
+                                <div class="task-col-due">Due Date</div>
+                                <div class="task-col-actions">Actions</div>
+                            </div>
+                            <div class="task-table-body" id="task-table-body">
+                                <!-- Tasks will be dynamically added here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Debug Panel -->
+        <div class="debug-panel">
+            <h3>Debug Panel</h3>
+            <div class="test-controls">
+                <button onclick="addTestTasks()">Add Test Tasks</button>
+                <button onclick="clearDebugLog()">Clear Log</button>
+                <button onclick="testDragAndDrop()">Test Drag & Drop</button>
+            </div>
+            <div>
+                <span class="status-indicator status-pending" id="drag-status"></span>
+                <span id="drag-status-text">Drag Status: Pending</span>
+            </div>
+            <div class="debug-log" id="debug-log">
+                Debug log will appear here...
+            </div>
+        </div>
+
+        <script src="app.js"></script>
+        <script>
+            // Debug logging
+            function log(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                const debugLog = document.getElementById('debug-log');
+                debugLog.innerHTML += `[${timestamp}] ${message}<br>`;
+                debugLog.scrollTop = debugLog.scrollHeight;
+                console.log(message);
+            }
+
+            function clearDebugLog() {
+                document.getElementById('debug-log').innerHTML = '';
+                log('Debug log cleared');
+            }
+
+            function updateDragStatus(status, text) {
+                const indicator = document.getElementById('drag-status');
+                const statusText = document.getElementById('drag-status-text');
+                
+                indicator.className = 'status-indicator';
+                if (status === 'working') {
+                    indicator.classList.add('status-working');
+                } else if (status === 'error') {
+                    indicator.classList.add('status-error');
+                } else {
+                    indicator.classList.add('status-pending');
+                }
+                
+                statusText.textContent = `Drag Status: ${text}`;
+            }
+
+            // Override the app's drag and drop setup to add debugging
+            const originalSetup = SprintTodoApp.prototype.setupBacklogTaskTableDragAndDrop;
+            SprintTodoApp.prototype.setupBacklogTaskTableDragAndDrop = function() {
+                log('Setting up subtask drag and drop...');
+                updateDragStatus('working', 'Setting up');
+                
+                const taskTableBody = document.getElementById('task-table-body');
+                if (!taskTableBody) {
+                    log('ERROR: task-table-body not found!');
+                    updateDragStatus('error', 'Setup Failed');
+                    return;
+                }
+
+                // Reset instance variables
+                this.draggedElement = null;
+                this.draggedTask = null;
+                this.draggedIndex = -1;
+
+                // Handle drag start
+                taskTableBody.addEventListener('dragstart', (e) => {
+                    const taskRow = e.target.closest('.task-table-row');
+                    log(`Drag start: ${taskRow ? taskRow.dataset.taskId : 'No task row'}`);
+                    
+                    if (taskRow && taskRow.dataset.taskId) {
+                        this.draggedElement = taskRow;
+                        this.draggedTask = this.getTask(taskRow.dataset.taskId);
+                        
+                        // Find the actual index in the tasks array
+                        this.draggedIndex = this.tasks.findIndex(t => t.id === taskRow.dataset.taskId);
+                        
+                        log(`Drag started: ${taskRow.dataset.taskId} (index: ${this.draggedIndex})`);
+                        log(`Is subtask: ${taskRow.classList.contains('subtask-row')}`);
+                        
+                        taskRow.classList.add('dragging');
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/html', taskRow.innerHTML);
+                        updateDragStatus('working', 'Dragging');
+                    } else {
+                        log('Drag start failed - no valid task row found');
+                        updateDragStatus('error', 'Drag Failed');
+                    }
+                });
+
+                // Handle drag end
+                taskTableBody.addEventListener('dragend', (e) => {
+                    if (this.draggedElement) {
+                        this.draggedElement.classList.remove('dragging');
+                        this.draggedElement = null;
+                        this.draggedTask = null;
+                        this.draggedIndex = -1;
+                    }
+                    
+                    // Clear all drag over styles
+                    taskTableBody.querySelectorAll('.drag-over').forEach(row => {
+                        row.classList.remove('drag-over');
+                    });
+                    
+                    log('Drag ended');
+                    updateDragStatus('pending', 'Ready');
+                });
+
+                // Handle drag over
+                taskTableBody.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+
+                    const taskRow = e.target.closest('.task-table-row');
+                    if (taskRow && taskRow !== this.draggedElement && taskRow.dataset.taskId) {
+                        const rect = taskRow.getBoundingClientRect();
+                        const midpoint = rect.top + rect.height / 2;
+                        
+                        // Clear previous drag over styles
+                        taskTableBody.querySelectorAll('.drag-over').forEach(row => {
+                            row.classList.remove('drag-over');
+                        });
+
+                        // Add drag over style to current target
+                        taskRow.classList.add('drag-over');
+
+                        // Show visual feedback for drop position
+                        if (e.clientY < midpoint) {
+                            taskRow.style.borderTop = '2px solid var(--primary-color)';
+                            taskRow.style.borderBottom = 'none';
+                        } else {
+                            taskRow.style.borderTop = 'none';
+                            taskRow.style.borderBottom = '2px solid var(--primary-color)';
+                        }
+                        
+                        log(`Drag over: ${taskRow.dataset.taskId}`);
+                    }
+                });
+
+                // Handle drag leave
+                taskTableBody.addEventListener('dragleave', (e) => {
+                    const taskRow = e.target.closest('.task-table-row');
+                    if (taskRow) {
+                        taskRow.classList.remove('drag-over');
+                        taskRow.style.borderTop = 'none';
+                        taskRow.style.borderBottom = 'none';
+                    }
+                });
+
+                // Handle drop
+                taskTableBody.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    
+                    const taskRow = e.target.closest('.task-table-row');
+                    log(`Drop event: ${taskRow ? taskRow.dataset.taskId : 'No target'}`);
+                    
+                    if (taskRow && taskRow !== this.draggedElement && taskRow.dataset.taskId) {
+                        const targetTask = this.getTask(taskRow.dataset.taskId);
+                        const targetIndex = this.tasks.findIndex(t => t.id === taskRow.dataset.taskId);
+                        
+                        if (targetTask && this.draggedTask) {
+                            const rect = taskRow.getBoundingClientRect();
+                            const midpoint = rect.top + rect.height / 2;
+                            const dropBefore = e.clientY < midpoint;
+                            
+                            log(`Reordering: ${this.draggedTask.title} -> ${targetTask.title} (${dropBefore ? 'before' : 'after'})`);
+                            log(`Dragged index: ${this.draggedIndex}, Target index: ${targetIndex}`);
+                            log(`Dragged is subtask: ${this.draggedElement.classList.contains('subtask-row')}`);
+                            log(`Target is subtask: ${taskRow.classList.contains('subtask-row')}`);
+                            
+                            // Reorder tasks
+                            this.reorderBacklogTasks(this.draggedTask, targetTask, dropBefore);
+                            updateDragStatus('working', 'Reordered');
+                        }
+                    } else {
+                        log('Drop failed - invalid target or same element');
+                        updateDragStatus('error', 'Drop Failed');
+                    }
+                    
+                    // Clear all drag styles
+                    taskTableBody.querySelectorAll('.drag-over').forEach(row => {
+                        row.classList.remove('drag-over');
+                    });
+                    taskTableBody.querySelectorAll('.task-table-row').forEach(row => {
+                        row.style.borderTop = 'none';
+                        row.style.borderBottom = 'none';
+                    });
+                });
+
+                log('Subtask drag and drop setup complete');
+                updateDragStatus('working', 'Setup Complete');
+            };
+
+            // Test functions
+            function addTestTasks() {
+                log('Adding test tasks...');
+                
+                // Create a parent task
+                const parentTask = app.createTask({
+                    title: 'Parent Task for Testing',
+                    description: 'This is a parent task with subtasks',
+                    points: 5,
+                    priority: 'high'
+                });
+                
+                if (parentTask) {
+                    log(`Created parent task: ${parentTask.id}`);
+                    
+                    // Create subtasks
+                    const subtask1 = app.createSubtask(parentTask.id, {
+                        title: 'Subtask 1',
+                        description: 'First subtask',
+                        points: 2,
+                        priority: 'medium'
+                    });
+                    
+                    const subtask2 = app.createSubtask(parentTask.id, {
+                        title: 'Subtask 2',
+                        description: 'Second subtask',
+                        points: 3,
+                        priority: 'low'
+                    });
+                    
+                    if (subtask1 && subtask2) {
+                        log(`Created subtasks: ${subtask1.id}, ${subtask2.id}`);
+                        log('Test tasks added successfully!');
+                    } else {
+                        log('ERROR: Failed to create subtasks');
+                    }
+                } else {
+                    log('ERROR: Failed to create parent task');
+                }
+                
+                // Refresh the task table
+                app.renderTasks('all');
+            }
+
+            function testDragAndDrop() {
+                log('Testing drag and drop functionality...');
+                
+                const taskRows = document.querySelectorAll('.task-table-row');
+                log(`Found ${taskRows.length} task rows`);
+                
+                taskRows.forEach((row, index) => {
+                    log(`Row ${index}: ${row.dataset.taskId} - ${row.classList.contains('subtask-row') ? 'Subtask' : 'Parent'}`);
+                });
+                
+                if (taskRows.length < 2) {
+                    log('ERROR: Need at least 2 tasks to test drag and drop');
+                    return;
+                }
+                
+                log('Drag and drop test ready. Try dragging tasks in the table above.');
+            }
+
+            // Initialize the app
+            document.addEventListener('DOMContentLoaded', function() {
+                window.app = new SprintTodoApp();
+                log('App initialized. Ready for testing.');
+                updateDragStatus('working', 'Ready');
+            });
+        </script>
+    </div>
+</body>
+</html>

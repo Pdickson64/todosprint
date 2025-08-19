@@ -1896,6 +1896,154 @@ textarea {
     background-color: #7f8c8d;
 }
 /* Hide task descriptions in board view */
-.board-column .task-description { 
-    display: none !important; 
+.board-column .task-description {
+    display: none !important;
+}
+
+/* Task Table Drag and Drop Styles */
+.task-table-row {
+    cursor: move;
+    transition: all 0.2s ease;
+}
+
+.task-table-row.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.task-table-row.drag-over {
+    background-color: #e3f2fd;
+    border: 2px dashed var(--primary-color);
+}
+
+.task-table-row.drag-over-top {
+    border-top: 3px solid var(--primary-color);
+    border-bottom: none;
+}
+
+.task-table-row.drag-over-bottom {
+    border-bottom: 3px solid var(--primary-color);
+    border-top: none;
+}
+
+/* Drag handle for task table rows */
+.task-table-row::before {
+    content: '⋮⋮';
+    position: absolute;
+    left: -15px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: grab;
+    color: var(--gray-color);
+    font-size: 0.8rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.task-table-row:hover::before {
+    opacity: 1;
+}
+
+.task-table-row.dragging::before {
+    opacity: 1;
+    color: var(--primary-color);
+}
+
+.task-table-row.dragging {
+    cursor: grabbing;
+}
+
+/* Ensure task table rows are positioned correctly */
+.task-table-body {
+    position: relative;
+}
+
+.task-table-row {
+    position: relative;
+}
+
+/* Drag handle indicator */
+.task-table-row::after {
+    content: '⋮⋮';
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: grab;
+}
+
+.task-table-row:hover::after {
+    opacity: 0.3;
+}
+
+.task-table-row.dragging::after {
+    opacity: 0.6;
+}
+
+/* Folder Drag and Drop Styles */
+.folder-item {
+    transition: all 0.2s ease;
+    cursor: move;
+}
+
+.folder-item.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.folder-item.drag-over {
+    background-color: #e3f2fd;
+    border: 2px dashed var(--primary-color);
+}
+
+.folder-item.drag-over-top {
+    border-top: 3px solid var(--primary-color);
+    border-bottom: none;
+}
+
+.folder-item.drag-over-bottom {
+    border-bottom: 3px solid var(--primary-color);
+    border-top: none;
+}
+
+/* Drag handle for folder items */
+.folder-item::before {
+    content: '⋮⋮';
+    position: absolute;
+    left: -15px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: grab;
+    color: var(--gray-color);
+    font-size: 0.8rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.folder-item:hover::before {
+    opacity: 1;
+}
+
+.folder-item.dragging::before {
+    opacity: 1;
+    color: var(--primary-color);
+}
+
+.folder-item.dragging {
+    cursor: grabbing;
+}
+
+/* Ensure folder items are positioned correctly */
+.folder-list {
+    position: relative;
+}
+
+.folder-item {
+    position: relative;
 }

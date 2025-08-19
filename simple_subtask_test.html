@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Subtask Drag and Drop Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .task-table-row {
+            border: 1px solid #ddd;
+            margin: 2px 0;
+            padding: 8px;
+            cursor: move;
+        }
+        
+        .subtask-row {
+            background-color: #f8f9fa;
+            margin-left: 20px;
+        }
+        
+        .dragging {
+            opacity: 0.5;
+            background-color: #e3f2fd;
+        }
+        
+        .drag-over {
+            background-color: #fff3cd;
+            border: 2px solid #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="app-header">
+            <div class="logo">
+                <i class="fas fa-tasks"></i>
+                <h1>Simple Subtask Test</h1>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="task-table-container">
+                <div class="task-table-header">
+                    <div class="task-col-title">Task</div>
+                    <div class="task-col-points">Points</div>
+                    <div class="task-col-priority">Priority</div>
+                    <div class="task-col-due">Due Date</div>
+                    <div class="task-col-actions">Actions</div>
+                </div>
+                <div class="task-table-body" id="task-table-body">
+                    <!-- Tasks will be rendered here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        // Simple test for subtask drag and drop
+        function simpleSubtaskTest() {
+            console.log('=== Simple Subtask Drag and Drop Test ===');
+            
+            // Clear existing data
+            if (window.app && window.app.tasks) {
+                window.app.tasks = [];
+                window.app.saveData();
+            }
+            
+            // Create a parent task
+            const parentTask = {
+                title: 'Parent Task',
+                description: 'This is a parent task',
+                points: 5,
+                priority: 'high',
+                dueDate: '2025-08-20'
+            };
+            
+            const createdParent = window.app.createTask(parentTask);
+            console.log('✅ Created parent task:', createdParent);
+            
+            // Create a subtask
+            const subtask = {
+                title: 'Subtask 1',
+                description: 'This is a subtask',
+                points: 2,
+                priority: 'medium',
+                dueDate: '2025-08-18'
+            };
+            
+            const createdSubtask = window.app.createSubtask(createdParent.id, subtask);
+            console.log('✅ Created subtask:', createdSubtask);
+            
+            // Render tasks
+            console.log('🔄 Rendering tasks...');
+            window.app.renderTasks('all');
+            
+            // Check the rendered DOM
+            setTimeout(() => {
+                const taskRows = document.querySelectorAll('.task-table-row');
+                console.log(`📋 Found ${taskRows.length} task table rows`);
+                
+                taskRows.forEach((row, index) => {
+                    console.log(`Row ${index + 1}:`, {
+                        id: row.dataset.taskId,
+                        isSubtask: row.classList.contains('subtask-row'),
+                        draggable: row.draggable,
+                        html: row.innerHTML.substring(0, 100) + '...'
+                    });
+                });
+                
+                // Test drag and drop
+                if (taskRows.length >= 2) {
+                    console.log('🔄 Testing drag and drop between rows...');
+                    
+                    const firstRow = taskRows[0];
+                    const secondRow = taskRows[1];
+                    
+                    console.log('Dragging row:', firstRow.dataset.taskId, 'to row:', secondRow.dataset.taskId);
+                    
+                    // Test drag start
+                    firstRow.addEventListener('dragstart', (e) => {
+                        console.log('✅ Drag start event triggered for:', firstRow.dataset.taskId);
+                    });
+                    
+                    // Test drop
+                    secondRow.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        console.log('✅ Drop event triggered on:', secondRow.dataset.taskId);
+                    });
+                    
+                    // Test drag over
+                    secondRow.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        console.log('✅ Drag over event triggered on:', secondRow.dataset.taskId);
+                    });
+                    
+                    // Manual test
+                    try {
+                        const dragStartEvent = new DragEvent('dragstart', {
+                            bubbles: true,
+                            cancelable: true,
+                            dataTransfer: new DataTransfer()
+                        });
+                        
+                        const dropEvent = new DragEvent('drop', {
+                            bubbles: true,
+                            cancelable: true
+                        });
+                        
+                        firstRow.dispatchEvent(dragStartEvent);
+                        secondRow.dispatchEvent(dropEvent);
+                        
+                        console.log('🎉 Manual drag and drop test completed!');
+                    } catch (error) {
+                        console.error('❌ Error during manual test:', error);
+                    }
+                }
+                
+                console.log('=== Simple Subtask Test Complete ===');
+            }, 1000);
+        }
+        
+        // Run the test when the page loads
+        window.addEventListener('load', function() {
+            setTimeout(simpleSubtaskTest, 1000);
+        });
+    </script>
+</body>
+</html>

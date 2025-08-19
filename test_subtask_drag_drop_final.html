@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subtask Drag and Drop Test</title>
+    <link rel="stylesheet" href="index.css">
+    <style>
+        .debug-panel {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            width: 300px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+        
+        .debug-panel h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        
+        .debug-log {
+            font-family: monospace;
+            font-size: 12px;
+            background: #fff;
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 3px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .debug-entry {
+            margin: 2px 0;
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+        
+        .debug-entry.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .debug-entry.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .debug-entry.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .test-controls {
+            margin-bottom: 10px;
+        }
+        
+        .test-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            margin: 2px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .test-btn:hover {
+            background: #0056b3;
+        }
+        
+        .test-btn.success {
+            background: #28a745;
+        }
+        
+        .test-btn.danger {
+            background: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-panel">
+        <h3>Subtask Drag & Drop Debug</h3>
+        <div class="test-controls">
+            <button class="test-btn" onclick="clearDebugLog()">Clear Log</button>
+            <button class="test-btn" onclick="createTestTasks()">Create Test Tasks</button>
+            <button class="test-btn" onclick="testSubtaskDragDrop()">Test Drag & Drop</button>
+        </div>
+        <div class="debug-log" id="debugLog"></div>
+    </div>
+
+    <script>
+        // Debug logging function
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `debug-entry ${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            
+            const debugLog = document.getElementById('debugLog');
+            debugLog.appendChild(logEntry);
+            debugLog.scrollTop = debugLog.scrollHeight;
+            
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function clearDebugLog() {
+            document.getElementById('debugLog').innerHTML = '';
+            log('Debug log cleared', 'info');
+        }
+
+        // Mock app object for testing
+        window.app = {
+            tasks: [],
+            draggedElement: null,
+            draggedTask: null,
+            draggedIndex: -1,
+            
+            getTask: function(taskId) {
+                return this.tasks.find(t => t.id === taskId);
+            },
+            
+            reorderBacklogTasks: function(draggedTask, targetTask, dropBefore) {
+                const draggedIndex = this.tasks.findIndex(t => t.id === draggedTask.id);
+                const targetIndex = this.tasks.findIndex(t => t.id === targetTask.id);
+                
+                log('reorderBacklogTasks called: ' + {
+                    draggedTask: draggedTask.title,
+                    isSubtask: draggedTask.parentTaskId || draggedTask.isSubtask,
+                    targetTask: targetTask.title,
+                    isTargetSubtask: targetTask.parentTaskId || targetTask.isSubtask,
+                    dropBefore: dropBefore,
+                    draggedIndex: draggedIndex,
+                    targetIndex: targetIndex,
+                    totalTasks: this.tasks.length
+                }, 'info');
+                
+                if (draggedIndex === -1 || targetIndex === -1) {
+                    log('Invalid indices: ' + { draggedIndex, targetIndex }, 'error');
+                    return;
+                }
+                
+                // Handle subtask reordering specially
+                const isDraggedSubtask = draggedTask.parentTaskId || draggedTask.isSubtask;
+                const isTargetSubtask = targetTask.parentTaskId || targetTask.isSubtask;
+                
+                if (isDraggedSubtask && isTargetSubtask) {
+                    // Both are subtasks - reorder within subtasks array of parent
+                    const draggedParentId = draggedTask.parentTaskId;
+                    const targetParentId = targetTask.parentTaskId;
+                    
+                    if (draggedParentId === targetParentId) {
+                        // Same parent - reorder within parent's subtasks
+                        const parentTask = this.getTask(draggedParentId);
+                        if (parentTask && parentTask.subtasks) {
+                            const draggedSubtaskIndex = parentTask.subtasks.findIndex(st => st.id === draggedTask.id);
+                            const targetSubtaskIndex = parentTask.subtasks.findIndex(st => st.id === targetTask.id);
+                            
+                            if (draggedSubtaskIndex !== -1 && targetSubtaskIndex !== -1) {
+                                // Remove dragged subtask
+                                const [removedSubtask] = parentTask.subtasks.splice(draggedSubtaskIndex, 1);
+                                // Insert at new position
+                                const newSubtaskIndex = dropBefore ? targetSubtaskIndex : targetSubtaskIndex + (draggedSubtaskIndex < targetSubtaskIndex ? 0 : 1);
+                                parentTask.subtasks.splice(newSubtaskIndex, 0, removedSubtask);
+                                
+                                log('Subtasks reordered within parent: ' + parentTask.title, 'success');
+                                return true;
+                            }
+                        }
+                    } else {
+                        // Different parents - move subtask between parents
+                        log('Moving subtask between different parents - not implemented yet', 'info');
+                        return false;
+                    }
+                } else if (!isDraggedSubtask && !isTargetSubtask) {
+                    // Both are parent tasks - reorder in main tasks array
+                    // Remove the dragged task from its current position
+                    const [removedTask] = this.tasks.splice(draggedIndex, 1);
+                    
+                    // Insert it at the new position
+                    const newIndex = dropBefore ? targetIndex : targetIndex + (draggedIndex < targetIndex ? 0 : 1);
+                    this.tasks.splice(newIndex, 0, removedTask);
+                    
+                    log('Parent tasks reordered. New order: ' + this.tasks.map(t => t.title), 'success');
+                    return true;
+                } else {
+                    // Mixed - one is subtask, one is parent
+                    log('Mixed drag and drop (subtask with parent) - not implemented yet', 'info');
+                    return false;
+                }
+                
+                return false;
+            },
+            
+            renderTasks: function() {
+                log('renderTasks called - refreshing task table', 'info');
+            }
+        };
+
+        function createTestTasks() {
+            // Clear existing tasks
+            app.tasks = [];
+            
+            // Create parent tasks
+            const parentTask1 = {
+                id: 'task1',
+                title: 'Parent Task 1',
+                parentTaskId: null,
+                subtasks: []
+            };
+            
+            const parentTask2 = {
+                id: 'task2',
+                title: 'Parent Task 2',
+                parentTaskId: null,
+                subtasks: []
+            };
+            
+            // Create subtasks
+            const subtask1 = {
+                id: 'subtask1',
+                title: 'Subtask 1.1',
+                parentTaskId: 'task1',
+                isSubtask: true
+            };
+            
+            const subtask2 = {
+                id: 'subtask2',
+                title: 'Subtask 1.2',
+                parentTaskId: 'task1',
+                isSubtask: true
+            };
+            
+            const subtask3 = {
+                id: 'subtask3',
+                title: 'Subtask 2.1',
+                parentTaskId: 'task2',
+                isSubtask: true
+            };
+            
+            // Add to main tasks array
+            app.tasks.push(parentTask1, parentTask2, subtask1, subtask2, subtask3);
+            
+            // Add subtasks to parent arrays
+            parentTask1.subtasks.push({ id: 'subtask1', title: 'Subtask 1.1' }, { id: 'subtask2', title: 'Subtask 1.2' });
+            parentTask2.subtasks.push({ id: 'subtask3', title: 'Subtask 2.1' });
+            
+            log('Test tasks created:', 'success');
+            log('Parent tasks: ' + app.tasks.filter(t => !t.parentTaskId).map(t => t.title).join(', '));
+            log('Subtasks: ' + app.tasks.filter(t => t.parentTaskId).map(t => t.title).join(', '));
+        }
+
+        function testSubtaskDragDrop() {
+            if (app.tasks.length === 0) {
+                log('No tasks to test. Please create test tasks first.', 'error');
+                return;
+            }
+            
+            log('Starting subtask drag and drop test...', 'info');
+            
+            // Test 1: Reorder subtasks within same parent
+            const parentTask1 = app.getTask('task1');
+            const subtask1 = app.getTask('subtask1');
+            const subtask2 = app.getTask('subtask2');
+            
+            if (parentTask1 && subtask1 && subtask2) {
+                log('Test 1: Reordering subtasks within same parent', 'info');
+                log('Before: ' + parentTask1.subtasks.map(st => st.title).join(' -> '));
+                
+                // Swap subtask1 and subtask2
+                const result = app.reorderBacklogTasks(subtask1, subtask2, true);
+                
+                if (result) {
+                    log('After: ' + parentTask1.subtasks.map(st => st.title).join(' -> '), 'success');
+                } else {
+                    log('Subtask reordering failed', 'error');
+                }
+            } else {
+                log('Test 1 setup failed - missing tasks', 'error');
+            }
+            
+            // Test 2: Try to reorder parent tasks
+            const parentTask2 = app.getTask('task2');
+            if (parentTask1 && parentTask2) {
+                log('Test 2: Reordering parent tasks', 'info');
+                log('Before: ' + app.tasks.filter(t => !t.parentTaskId).map(t => t.title).join(' -> '));
+                
+                const result = app.reorderBacklogTasks(parentTask1, parentTask2, true);
+                
+                if (result) {
+                    log('After: ' + app.tasks.filter(t => !t.parentTaskId).map(t => t.title).join(' -> '), 'success');
+                } else {
+                    log('Parent task reordering failed', 'error');
+                }
+            }
+            
+            log('Subtask drag and drop test completed', 'success');
+        }
+
+        // Initialize
+        log('Subtask Drag and Drop Test initialized', 'success');
+        log('Click "Create Test Tasks" to begin testing', 'info');
+    </script>
+</body>
+</html>

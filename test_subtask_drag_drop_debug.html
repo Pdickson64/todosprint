@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subtask Drag and Drop Debug Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .console-output {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .task-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        .task-table th, .task-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .task-table th {
+            background-color: #f2f2f2;
+        }
+        .task-table-row {
+            cursor: move;
+            transition: background-color 0.2s;
+        }
+        .task-table-row:hover {
+            background-color: #f9f9f9;
+        }
+        .task-table-row.dragging {
+            opacity: 0.5;
+            background-color: #e3f2fd;
+        }
+        .task-table-row.drag-over {
+            background-color: #fff3cd;
+            border: 2px solid #ffc107;
+        }
+        .subtask-row {
+            background-color: #f8f9fa;
+            font-style: italic;
+        }
+        .btn {
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn-success {
+            background: #28a745;
+        }
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        .status {
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status.todo { background: #e3f2fd; color: #1976d2; }
+        .status.in-progress { background: #fff3e0; color: #f57c00; }
+        .status.review { background: #f3e5f5; color: #7b1fa2; }
+        .status.done { background: #e8f5e8; color: #388e3c; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Subtask Drag and Drop Debug Test</h1>
+        
+        <div class="test-section">
+            <h3>Test Setup</h3>
+            <button class="btn" onclick="createTestData()">Create Test Data</button>
+            <button class="btn btn-success" onclick="testDragAndDrop()">Test Drag and Drop</button>
+            <button class="btn" onclick="clearConsole()">Clear Console</button>
+        </div>
+
+        <div class="test-section">
+            <h3>Task Table (Test Drag and Drop Here)</h3>
+            <table class="task-table">
+                <thead>
+                    <tr>
+                        <th>Task</th>
+                        <th>Priority</th>
+                        <th>Points</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="task-table-body">
+                    <!-- Tasks will be populated here -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="test-section">
+            <h3>Console Output</h3>
+            <div class="console-output" id="console-output">
+                Console output will appear here...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock app object for testing
+        const mockApp = {
+            tasks: [],
+            draggedElement: null,
+            draggedTask: null,
+            draggedIndex: -1,
+            
+            log: function(message) {
+                const consoleOutput = document.getElementById('console-output');
+                const timestamp = new Date().toLocaleTimeString();
+                consoleOutput.innerHTML += `[${timestamp}] ${message}\n`;
+                consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                console.log(message);
+            },
+            
+            getTask: function(taskId) {
+                return this.tasks.find(t => t.id === taskId);
+            },
+            
+            createTask: function(taskData) {
+                const task = {
+                    id: Date.now().toString(),
+                    title: taskData.title,
+                    description: taskData.description || '',
+                    points: taskData.points || 1,
+                    priority: taskData.priority || 'medium',
+                    status: taskData.status || 'todo',
+                    folderId: taskData.folderId || null,
+                    parentTaskId: taskData.parentTaskId || null,
+                    subtasks: []
+                };
+                this.tasks.push(task);
+                this.log(`Created task: ${task.title} (ID: ${task.id})`);
+                return task;
+            },
+            
+            reorderBacklogTasks: function(draggedTask, targetTask, dropBefore) {
+                const draggedIndex = this.tasks.findIndex(t => t.id === draggedTask.id);
+                const targetIndex = this.tasks.findIndex(t => t.id === targetTask.id);
+                
+                this.log(`reorderBacklogTasks called: ${draggedTask.title} -> ${targetTask.title}, dropBefore: ${dropBefore}`);
+                this.log(`Indices: dragged=${draggedIndex}, target=${targetIndex}`);
+                
+                if (draggedIndex === -1 || targetIndex === -1) {
+                    this.log('ERROR: Invalid indices');
+                    return;
+                }
+                
+                // Remove the dragged task from its current position
+                const [removedTask] = this.tasks.splice(draggedIndex, 1);
+                
+                // Insert it at the new position
+                const newIndex = dropBefore ? targetIndex : targetIndex + (draggedIndex < targetIndex ? 0 : 1);
+                this.tasks.splice(newIndex, 0, removedTask);
+                
+                this.log(`Task order updated. New order: ${this.tasks.map(t => t.title).join(', ')}`);
+                this.renderTasks();
+            },
+            
+            renderTasks: function() {
+                const tbody = document.getElementById('task-table-body');
+                tbody.innerHTML = '';
+                
+                this.tasks.forEach(task => {
+                    const row = document.createElement('tr');
+                    row.className = task.parentTaskId ? 'subtask-row' : 'task-table-row';
+                    row.dataset.taskId = task.id;
+                    row.draggable = true;
+                    
+                    row.innerHTML = `
+                        <td>${task.title} ${task.parentTaskId ? '(Subtask)' : ''}</td>
+                        <td>${task.priority}</td>
+                        <td>${task.points}</td>
+                        <td><span class="status ${task.status}">${task.status}</span></td>
+                        <td>
+                            <button class="btn" onclick="editTask('${task.id}')">Edit</button>
+                            ${!task.parentTaskId ? `<button class="btn" onclick="addSubtask('${task.id}')">Add Subtask</button>` : ''}
+                        </td>
+                    `;
+                    
+                    tbody.appendChild(row);
+                });
+                
+                this.setupDragAndDrop();
+                this.log('Tasks rendered');
+            },
+            
+            setupDragAndDrop: function() {
+                const tbody = document.getElementById('task-table-body');
+                if (!tbody) return;
+
+                // Reset instance variables
+                this.draggedElement = null;
+                this.draggedTask = null;
+                this.draggedIndex = -1;
+
+                // Handle drag start
+                tbody.addEventListener('dragstart', (e) => {
+                    const taskRow = e.target.closest('.task-table-row, .subtask-row');
+                    this.log('Drag start event: ' + JSON.stringify({
+                        target: e.target,
+                        taskRow: taskRow,
+                        hasTaskId: taskRow && taskRow.dataset.taskId,
+                        isSubtask: taskRow && taskRow.classList.contains('subtask-row'),
+                        taskRowHtml: taskRow ? taskRow.outerHTML.substring(0, 200) : 'null'
+                    }));
+                    
+                    if (taskRow && taskRow.dataset.taskId) {
+                        this.draggedElement = taskRow;
+                        this.draggedTask = this.getTask(taskRow.dataset.taskId);
+                        
+                        // Find the actual index in the tasks array, not just DOM position
+                        this.draggedIndex = this.tasks.findIndex(t => t.id === taskRow.dataset.taskId);
+                        
+                        this.log('Drag started: ' + JSON.stringify({
+                            taskId: taskRow.dataset.taskId,
+                            taskTitle: this.draggedTask ? this.draggedTask.title : 'null',
+                            draggedIndex: this.draggedIndex,
+                            domIndex: Array.from(tbody.children).indexOf(taskRow),
+                            isSubtask: taskRow.classList.contains('subtask-row')
+                        }));
+                        
+                        taskRow.classList.add('dragging');
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/html', taskRow.innerHTML);
+                    } else {
+                        this.log('Drag start failed - no valid task row found');
+                    }
+                });
+
+                // Handle drag end
+                tbody.addEventListener('dragend', (e) => {
+                    if (this.draggedElement) {
+                        this.draggedElement.classList.remove('dragging');
+                        this.draggedElement = null;
+                        this.draggedTask = null;
+                        this.draggedIndex = -1;
+                    }
+                    // Clear all drag over styles
+                    tbody.querySelectorAll('.drag-over').forEach(row => {
+                        row.classList.remove('drag-over');
+                    });
+                });
+
+                // Handle drag over
+                tbody.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+
+                    const taskRow = e.target.closest('.task-table-row, .subtask-row');
+                    if (taskRow && taskRow !== this.draggedElement && taskRow.dataset.taskId) {
+                        const rect = taskRow.getBoundingClientRect();
+                        const midpoint = rect.top + rect.height / 2;
+                        
+                        // Clear previous drag over styles
+                        tbody.querySelectorAll('.drag-over').forEach(row => {
+                            row.classList.remove('drag-over');
+                        });
+
+                        // Add drag over style to current target
+                        taskRow.classList.add('drag-over');
+
+                        // Show visual feedback for drop position
+                        if (e.clientY < midpoint) {
+                            taskRow.style.borderTop = '2px solid #007bff';
+                            taskRow.style.borderBottom = 'none';
+                        } else {
+                            taskRow.style.borderTop = 'none';
+                            taskRow.style.borderBottom = '2px solid #007bff';
+                        }
+                    }
+                });
+
+                // Handle drag leave
+                tbody.addEventListener('dragleave', (e) => {
+                    const taskRow = e.target.closest('.task-table-row, .subtask-row');
+                    if (taskRow) {
+                        taskRow.classList.remove('drag-over');
+                        taskRow.style.borderTop = 'none';
+                        taskRow.style.borderBottom = 'none';
+                    }
+                });
+
+                // Handle drop
+                tbody.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    
+                    const taskRow = e.target.closest('.task-table-row, .subtask-row');
+                    this.log('Drop event: ' + JSON.stringify({
+                        hasTaskRow: !!taskRow,
+                        taskRowId: taskRow ? taskRow.dataset.taskId : 'null',
+                        draggedElementId: this.draggedElement ? this.draggedElement.dataset.taskId : 'null',
+                        draggedTask: this.draggedTask ? this.draggedTask.title : 'null',
+                        targetTask: taskRow ? this.getTask(taskRow.dataset.taskId)?.title : 'null',
+                        isDraggedSubtask: this.draggedElement && this.draggedElement.classList.contains('subtask-row'),
+                        isTargetSubtask: taskRow && taskRow.classList.contains('subtask-row')
+                    }));
+                    
+                    if (taskRow && taskRow !== this.draggedElement && taskRow.dataset.taskId) {
+                        const targetTask = this.getTask(taskRow.dataset.taskId);
+                        // Find the actual index in the tasks array, not just DOM position
+                        const targetIndex = this.tasks.findIndex(t => t.id === taskRow.dataset.taskId);
+                        
+                        if (targetTask && this.draggedTask) {
+                            const rect = taskRow.getBoundingClientRect();
+                            const midpoint = rect.top + rect.height / 2;
+                            const dropBefore = e.clientY < midpoint;
+                            
+                            this.log('Reordering tasks: ' + JSON.stringify({
+                                draggedTask: this.draggedTask.title,
+                                targetTask: targetTask.title,
+                                dropBefore: dropBefore,
+                                draggedIndex: this.draggedIndex,
+                                targetIndex: targetIndex,
+                                domTargetIndex: Array.from(tbody.children).indexOf(taskRow),
+                                isDraggedSubtask: this.draggedElement.classList.contains('subtask-row'),
+                                isTargetSubtask: taskRow.classList.contains('subtask-row')
+                            }));
+                            
+                            // Reorder tasks
+                            this.reorderBacklogTasks(this.draggedTask, targetTask, dropBefore);
+                        }
+                    } else {
+                        this.log('Drop failed - invalid target or same element');
+                    }
+                    
+                    // Clear all drag styles
+                    tbody.querySelectorAll('.drag-over').forEach(row => {
+                        row.classList.remove('drag-over');
+                    });
+                    tbody.querySelectorAll('.task-table-row, .subtask-row').forEach(row => {
+                        row.style.borderTop = 'none';
+                        row.style.borderBottom = 'none';
+                    });
+                });
+            }
+        };
+
+        // Test functions
+        function createTestData() {
+            mockApp.tasks = [];
+            
+            // Create parent tasks
+            const task1 = mockApp.createTask({
+                title: 'Parent Task 1',
+                priority: 'high',
+                points: 5,
+                status: 'todo'
+            });
+            
+            const task2 = mockApp.createTask({
+                title: 'Parent Task 2',
+                priority: 'medium',
+                points: 3,
+                status: 'in-progress'
+            });
+            
+            const task3 = mockApp.createTask({
+                title: 'Parent Task 3',
+                priority: 'low',
+                points: 2,
+                status: 'todo'
+            });
+            
+            // Create subtasks
+            const subtask1 = mockApp.createTask({
+                title: 'Subtask 1.1',
+                priority: 'medium',
+                points: 1,
+                status: 'todo',
+                parentTaskId: task1.id
+            });
+            
+            const subtask2 = mockApp.createTask({
+                title: 'Subtask 1.2',
+                priority: 'low',
+                points: 1,
+                status: 'todo',
+                parentTaskId: task1.id
+            });
+            
+            const subtask3 = mockApp.createTask({
+                title: 'Subtask 2.1',
+                priority: 'high',
+                points: 2,
+                status: 'in-progress',
+                parentTaskId: task2.id
+            });
+            
+            mockApp.renderTasks();
+            mockApp.log('Test data created successfully');
+        }
+
+        function testDragAndDrop() {
+            mockApp.log('Starting drag and drop test...');
+            mockApp.log('Instructions:');
+            mockApp.log('1. Try dragging a parent task and dropping it on another task');
+            mockApp.log('2. Try dragging a subtask and dropping it on another task');
+            mockApp.log('3. Try dragging a subtask and dropping it on a parent task');
+            mockApp.log('4. Check console output for detailed debugging information');
+        }
+
+        function clearConsole() {
+            document.getElementById('console-output').innerHTML = 'Console cleared...\n';
+        }
+
+        function editTask(taskId) {
+            const task = mockApp.getTask(taskId);
+            if (task) {
+                const newTitle = prompt('Edit task title:', task.title);
+                if (newTitle) {
+                    task.title = newTitle;
+                    mockApp.renderTasks();
+                    mockApp.log(`Task updated: ${newTitle}`);
+                }
+            }
+        }
+
+        function addSubtask(parentTaskId) {
+            const parentTask = mockApp.getTask(parentTaskId);
+            if (parentTask) {
+                const title = prompt('Enter subtask title:');
+                if (title) {
+                    mockApp.createTask({
+                        title: title,
+                        priority: 'medium',
+                        points: 1,
+                        status: 'todo',
+                        parentTaskId: parentTaskId
+                    });
+                    mockApp.renderTasks();
+                    mockApp.log(`Subtask created: ${title}`);
+                }
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            mockApp.log('Subtask Drag and Drop Debug Test initialized');
+            mockApp.log('Click "Create Test Data" to start testing');
+        });
+    </script>
+</body>
+</html>
