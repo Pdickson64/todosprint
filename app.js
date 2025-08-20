@@ -1420,8 +1420,9 @@ function SprintTodoApp() {
             </select>
         `;
         
-        // Format due date
-        const dueDate = task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date';
+        // Format sprint assignment
+        const sprint = task.sprintId ? this.getSprint(task.sprintId) : null;
+        const sprintAssignment = sprint ? sprint.name : 'No Sprint';
         
         // Create checkbox for subtasks
         const checkbox = task.parentTaskId ? `
@@ -1457,7 +1458,7 @@ function SprintTodoApp() {
             <div class="task-col-priority">
                 ${priorityDropdown}
             </div>
-            <div class="task-col-due">${dueDate}</div>
+            <div class="task-col-sprint">${sprintAssignment}</div>
             <div class="task-col-actions">
                 <button class="btn-secondary" onclick="app.editTask('${task.id}')" title="Edit task">
                     <i class="fas fa-edit"></i>
@@ -1573,8 +1574,9 @@ function SprintTodoApp() {
             </select>
         `;
         
-        // Format due date
-        const dueDate = subtask.dueDate ? new Date(subtask.dueDate).toLocaleDateString() : 'No due date';
+        // Format sprint assignment
+        const sprint = subtask.sprintId ? this.getSprint(subtask.sprintId) : null;
+        const sprintAssignment = sprint ? sprint.name : 'No Sprint';
         
         // Create checkbox for subtasks
         const checkbox = `
@@ -1602,7 +1604,7 @@ function SprintTodoApp() {
             <div class="task-col-priority">
                 ${priorityDropdown}
             </div>
-            <div class="task-col-due">${dueDate}</div>
+            <div class="task-col-sprint">${sprintAssignment}</div>
             <div class="task-col-actions">
                 <button class="btn-secondary" onclick="app.editTask('${subtask.id}')" title="Edit task">
                     <i class="fas fa-edit"></i>

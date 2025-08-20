@@ -355,7 +355,7 @@ body {
 
 .task-table-row.subtask-row .task-col-points,
 .task-table-row.subtask-row .task-col-priority,
-.task-table-row.subtask-row .task-col-due {
+.task-table-row.subtask-row .task-col-sprint {
     opacity: 0.8;
 }
 
@@ -447,7 +447,7 @@ body {
     text-align: left;
 }
 
-.task-col-due {
+.task-col-sprint {
     text-align: left;
     font-size: 0.85rem;
     color: var(--gray-color);
@@ -512,7 +512,7 @@ body {
     text-align: center;
 }
 
-.task-col-due {
+.task-col-sprint {
     text-align: center;
     font-size: 0.85rem;
     color: var(--gray-color);
@@ -649,7 +649,7 @@ body {
     .task-col-title,
     .task-col-points,
     .task-col-priority,
-    .task-col-due,
+    .task-col-sprint,
     .task-col-actions {
         display: flex;
         justify-content: space-between;
