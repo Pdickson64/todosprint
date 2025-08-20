@@ -44,6 +44,21 @@ function SprintTodoApp() {
             });
         }
         
+        // Add event listeners for subtask collapse/expand buttons
+        const expandAllSubtasksBtn = document.getElementById('expand-all-subtasks-btn');
+        if (expandAllSubtasksBtn) {
+            expandAllSubtasksBtn.addEventListener('click', () => {
+                this.expandAllSubtasks();
+            });
+        }
+        
+        const collapseAllSubtasksBtn = document.getElementById('collapse-all-subtasks-btn');
+        if (collapseAllSubtasksBtn) {
+            collapseAllSubtasksBtn.addEventListener('click', () => {
+                this.collapseAllSubtasks();
+            });
+        }
+        
         // Add event listeners for task creation buttons
         const addTaskBtn = document.getElementById('add-task-btn');
         if (addTaskBtn) {
@@ -666,6 +681,67 @@ function SprintTodoApp() {
 
     SprintTodoApp.prototype.getFolder = function(folderId) {
         return this.folders.find(f => f.id === folderId);
+    }
+    
+    // Collapse/Expand all subtasks functionality
+    SprintTodoApp.prototype.expandAllSubtasks = function() {
+        console.log('Expanding all subtasks');
+        const activeFolder = document.querySelector('.folder-item.active');
+        const folderId = activeFolder ? activeFolder.dataset.folderId : 'all';
+        
+        // Get all tasks in the current folder
+        const tasksInFolder = this.tasks.filter(task => {
+            if (folderId === 'all') {
+                return !task.folderId;
+            } else {
+                return task.folderId === folderId;
+            }
+        });
+        
+        // Expand all subtasks for each task
+        tasksInFolder.forEach(task => {
+            if (task.subtasks && task.subtasks.length > 0) {
+                task.expanded = true; // Set expanded state to true
+            }
+        });
+        
+        // Save the changes
+        this.saveData();
+        
+        // Re-render the task table
+        this.renderTasks(folderId);
+        
+        this.showNotification('All subtasks expanded', 'success');
+    }
+    
+    SprintTodoApp.prototype.collapseAllSubtasks = function() {
+        console.log('Collapsing all subtasks');
+        const activeFolder = document.querySelector('.folder-item.active');
+        const folderId = activeFolder ? activeFolder.dataset.folderId : 'all';
+        
+        // Get all tasks in the current folder
+        const tasksInFolder = this.tasks.filter(task => {
+            if (folderId === 'all') {
+                return !task.folderId;
+            } else {
+                return task.folderId === folderId;
+            }
+        });
+        
+        // Collapse all subtasks for each task
+        tasksInFolder.forEach(task => {
+            if (task.subtasks && task.subtasks.length > 0) {
+                task.expanded = false; // Set expanded state to false
+            }
+        });
+        
+        // Save the changes
+        this.saveData();
+        
+        // Re-render the task table
+        this.renderTasks(folderId);
+        
+        this.showNotification('All subtasks collapsed', 'success');
     }
 
     // Recurring Tasks
@@ -1962,6 +2038,25 @@ function SprintTodoApp() {
         // Debug: Log all tasks and their statuses
         console.log('All tasks in sprint:', tasks.map(t => ({ id: t.id, title: t.title, status: t.status })));
         
+        // Sort tasks by manualOrder to preserve drag and drop ordering
+        tasks.sort((a, b) => {
+            // If both tasks have manual order, use that
+            if (a.manualOrder !== undefined && b.manualOrder !== undefined) {
+                return a.manualOrder - b.manualOrder;
+            }
+            // If only one has manual order, prioritize it
+            if (a.manualOrder !== undefined) {
+                return -1;
+            }
+            if (b.manualOrder !== undefined) {
+                return 1;
+            }
+            // Otherwise sort by creation date (newest first)
+            return new Date(b.createdAt) - new Date(a.createdAt);
+        });
+        
+        console.log('Tasks after sorting:', tasks.map(t => ({ id: t.id, title: t.title, manualOrder: t.manualOrder })));
+        
         statuses.forEach(status => {
             const statusTasks = tasks.filter(task => task.status === status.id);
             const totalPoints = statusTasks.reduce((sum, task) => sum + task.points, 0);
@@ -2489,6 +2584,24 @@ function SprintTodoApp() {
                 this.draggedElement = e.target;
                 this.draggedTask = this.getTask(e.target.dataset.taskId);
                 e.target.classList.add('dragging');
+                
+                // Set drag image to the element itself for better visual feedback
+                const dragImage = e.target.cloneNode(true);
+                dragImage.style.opacity = '0.5';
+                dragImage.style.position = 'absolute';
+                dragImage.style.pointerEvents = 'none';
+                dragImage.style.zIndex = '9999';
+                document.body.appendChild(dragImage);
+                
+                // Set the custom drag image
+                e.dataTransfer.setDragImage(dragImage, 0, 0);
+                
+                // Remove the temporary drag image after a short delay
+                setTimeout(() => {
+                    if (dragImage.parentNode) {
+                        dragImage.parentNode.removeChild(dragImage);
+                    }
+                }, 0);
             }
         });
         
@@ -2496,6 +2609,14 @@ function SprintTodoApp() {
             if (e.target.classList.contains('task-item')) {
                 e.target.classList.remove('dragging');
             }
+            
+            // Clean up all drag indicators
+            document.querySelectorAll('.drag-over').forEach(el => {
+                el.classList.remove('drag-over');
+            });
+            document.querySelectorAll('.drop-indicator').forEach(el => {
+                el.remove();
+            });
         });
         
         document.addEventListener('dragover', (e) => {
@@ -2503,6 +2624,9 @@ function SprintTodoApp() {
             const columnContent = e.target.closest('.column-content');
             if (columnContent && this.draggedElement) {
                 columnContent.classList.add('drag-over');
+                
+                // Show drop indicator within the column
+                this.showDropIndicator(columnContent, e);
             }
         });
         
@@ -2510,6 +2634,12 @@ function SprintTodoApp() {
             const columnContent = e.target.closest('.column-content');
             if (columnContent) {
                 columnContent.classList.remove('drag-over');
+                
+                // Remove drop indicator when leaving column
+                const indicator = columnContent.querySelector('.drop-indicator');
+                if (indicator) {
+                    indicator.remove();
+                }
             }
         });
         
@@ -2519,22 +2649,236 @@ function SprintTodoApp() {
             if (columnContent && this.draggedElement && this.draggedTask) {
                 columnContent.classList.remove('drag-over');
                 
-                // Update task status
-                const newStatus = columnContent.dataset.status;
-                const sprintId = this.currentSprint ? this.currentSprint.id : 
-                    document.getElementById('sprint-selector').value;
+                // Remove drop indicator
+                const indicator = columnContent.querySelector('.drop-indicator');
+                if (indicator) {
+                    indicator.remove();
+                }
                 
-                if (sprintId) {
-                    this.updateTask(this.draggedTask.id, {
-                        status: newStatus,
-                        sprintId: sprintId
-                    });
+                // Check if this is a same-column reorder or cross-column status change
+                const newStatus = columnContent.dataset.status;
+                const isSameColumn = this.draggedTask.status === newStatus;
+                
+                if (isSameColumn) {
+                    // Handle same-column reordering
+                    this.handleSameColumnReorder(columnContent, e);
+                } else {
+                    // Handle cross-column status change
+                    const sprintId = this.currentSprint ? this.currentSprint.id :
+                        document.getElementById('sprint-selector').value;
                     
-                    // Refresh the board
-                    this.renderSprintBoard();
+                    if (sprintId) {
+                        this.updateTask(this.draggedTask.id, {
+                            status: newStatus,
+                            sprintId: sprintId
+                        });
+                        
+                        // Refresh the board
+                        this.renderSprintBoard();
+                    }
                 }
             }
         });
+    }
+    
+    // Handle task reordering within the same column
+    SprintTodoApp.prototype.handleSameColumnReorder = function(columnContent, event) {
+        if (!this.draggedTask || !this.draggedElement) return;
+        
+        // Get all task elements in this column, excluding the dragged element
+        const taskElements = Array.from(columnContent.querySelectorAll('.task-item')).filter(el => el !== this.draggedElement);
+        let targetElement = null;
+        let insertBefore = false;
+        
+        if (taskElements.length === 0) {
+            // No other tasks in this column, nothing to reorder
+            return;
+        }
+        
+        // Find the target element and determine insert position
+        for (let element of taskElements) {
+            const rect = element.getBoundingClientRect();
+            const midpoint = rect.top + rect.height / 2;
+            
+            if (event.clientY < midpoint) {
+                targetElement = element;
+                insertBefore = true;
+                break;
+            }
+        }
+        
+        // If no target element found, insert at the end
+        if (!targetElement) {
+            targetElement = taskElements[taskElements.length - 1];
+            insertBefore = false;
+        }
+        
+        if (targetElement) {
+            const targetTask = this.getTask(targetElement.dataset.taskId);
+            if (targetTask) {
+                console.log('Reordering tasks within same column:', {
+                    draggedTask: this.draggedTask.title,
+                    targetTask: targetTask.title,
+                    insertBefore: insertBefore
+                });
+                
+                // Reorder tasks in the data model
+                this.reorderSprintBoardTasks(this.draggedTask, targetTask, insertBefore);
+            }
+        }
+    }
+    
+    // Show drop indicator for better visual feedback
+    SprintTodoApp.prototype.showDropIndicator = function(columnContent, event) {
+        // Remove existing indicator
+        const existingIndicator = columnContent.querySelector('.drop-indicator');
+        if (existingIndicator) {
+            existingIndicator.remove();
+        }
+        
+        // Get all task elements in this column (excluding the dragged element)
+        const taskElements = Array.from(columnContent.querySelectorAll('.task-item')).filter(el => el !== this.draggedElement);
+        
+        if (taskElements.length === 0) {
+            // No other tasks, show indicator at the bottom
+            const indicator = document.createElement('div');
+            indicator.className = 'drop-indicator';
+            indicator.style.cssText = `
+                width: 100%;
+                height: 3px;
+                background-color: #007bff;
+                margin: 8px 0;
+                border-radius: 2px;
+                animation: pulse 1s infinite;
+            `;
+            columnContent.appendChild(indicator);
+            return;
+        }
+        
+        // Find the best position for the indicator - improved positioning
+        let bestElement = null;
+        let bestPosition = null;
+        let bestDistance = Infinity;
+        
+        for (let element of taskElements) {
+            const rect = element.getBoundingClientRect();
+            const columnRect = columnContent.getBoundingClientRect();
+            const elementTop = rect.top - columnRect.top;
+            const elementBottom = rect.bottom - columnRect.top;
+            const elementMidpoint = elementTop + rect.height / 2;
+            const elementQuarter = elementTop + rect.height / 4; // Quarter point for more precise positioning
+            
+            // Calculate distance from cursor to different points
+            const distanceToMidpoint = Math.abs(event.clientY - (columnRect.top + elementMidpoint));
+            const distanceToQuarter = Math.abs(event.clientY - (columnRect.top + elementQuarter));
+            
+            // Use quarter point for more precise positioning
+            if (event.clientY < (columnRect.top + elementQuarter)) {
+                if (distanceToQuarter < bestDistance) {
+                    bestElement = element;
+                    bestPosition = 'top';
+                    bestDistance = distanceToQuarter;
+                }
+            }
+        }
+        
+        // If no element found above cursor, place at the bottom
+        if (!bestElement) {
+            bestElement = taskElements[taskElements.length - 1];
+            bestPosition = 'bottom';
+        }
+        
+        // Create and insert the indicator
+        const indicator = document.createElement('div');
+        indicator.className = 'drop-indicator';
+        indicator.style.cssText = `
+            width: 100%;
+            height: 3px;
+            background-color: #007bff;
+            border-radius: 2px;
+            animation: pulse 1s infinite;
+        `;
+        
+        if (bestPosition === 'top') {
+            columnContent.insertBefore(indicator, bestElement);
+        } else {
+            columnContent.insertBefore(indicator, bestElement.nextSibling);
+        }
+    }
+    
+    // Reorder tasks within the sprint board
+    SprintTodoApp.prototype.reorderSprintBoardTasks = function(draggedTask, targetTask, insertBefore) {
+        // Get all tasks for the current sprint
+        const sprintId = this.currentSprint ? this.currentSprint.id :
+            document.getElementById('sprint-selector').value;
+        
+        if (!sprintId) return;
+        
+        const allTasks = this.getFlatTasksForSprintBoard(sprintId);
+        const statusTasks = allTasks.filter(task => task.status === draggedTask.status);
+        
+        // Find indices in the status-specific array
+        const draggedIndex = statusTasks.findIndex(task => task.id === draggedTask.id);
+        const targetIndex = statusTasks.findIndex(task => task.id === targetTask.id);
+        
+        if (draggedIndex === -1 || targetIndex === -1) return;
+        
+        console.log('Reordering sprint board tasks:', {
+            draggedTask: draggedTask.title,
+            targetTask: targetTask.title,
+            insertBefore: insertBefore,
+            draggedIndex: draggedIndex,
+            targetIndex: targetIndex
+        });
+        
+        // Create a copy of the original status tasks for reference
+        const originalStatusTasks = [...statusTasks];
+        
+        // Create a new array to avoid modifying the original during iteration
+        const newStatusTasks = [...statusTasks];
+        
+        // Remove the dragged task from its current position
+        newStatusTasks.splice(draggedIndex, 1);
+        
+        // Calculate the new position more precisely
+        let newIndex;
+        if (insertBefore) {
+            // Insert before the target task
+            if (draggedIndex < targetIndex) {
+                // Moving forward: target index shifts left by 1 after removal
+                newIndex = targetIndex - 1;
+            } else {
+                // Moving backward: target index stays the same
+                newIndex = targetIndex;
+            }
+        } else {
+            // Insert after the target task
+            if (draggedIndex < targetIndex) {
+                // Moving forward: target index stays the same
+                newIndex = targetIndex + 1;
+            } else {
+                // Moving backward: target index stays the same
+                newIndex = targetIndex + 1;
+            }
+        }
+        
+        // Insert the dragged task at the new position
+        newStatusTasks.splice(newIndex, 0, originalStatusTasks[draggedIndex]);
+        
+        // Update manual order for all tasks in this status to preserve the new ordering
+        newStatusTasks.forEach((task, index) => {
+            const fullTask = this.getTask(task.id);
+            if (fullTask) {
+                fullTask.manualOrder = index;
+                console.log(`Updated task ${fullTask.title} manualOrder to ${index}`);
+            }
+        });
+        
+        // Save data and refresh
+        this.saveData();
+        this.renderSprintBoard();
+        
+        console.log('Reordering completed successfully');
     }
 
     // Backlog Task Table Drag and Drop
@@ -3644,7 +3988,7 @@ document.addEventListener('DOMContentLoaded', function() {
     window.app = new SprintTodoApp();
 });
 
-// Add CSS animation for notifications
+// Add CSS animations for drag and drop
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideIn {
@@ -3656,6 +4000,37 @@ style.textContent = `
             transform: translateX(0);
             opacity: 1;
         }
+    }
+    
+    @keyframes pulse {
+        0% {
+            opacity: 0.6;
+            transform: scaleX(1);
+        }
+        50% {
+            opacity: 1;
+            transform: scaleX(1.1);
+        }
+        100% {
+            opacity: 0.6;
+            transform: scaleX(1);
+        }
+    }
+    
+    .dragging {
+        opacity: 0.5;
+        transform: rotate(2deg);
+        transition: all 0.2s ease;
+    }
+    
+    .column-content.drag-over {
+        background-color: rgba(0, 123, 255, 0.1);
+        border: 2px dashed #007bff;
+        border-radius: 8px;
+    }
+    
+    .drop-indicator {
+        transition: all 0.2s ease;
     }
 `;
 document.head.appendChild(style);

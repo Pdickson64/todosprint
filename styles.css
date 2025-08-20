@@ -681,6 +681,33 @@ body {
     border: 1px solid #e0e0e0;
 }
 
+/* Subtask Controls */
+.subtask-controls {
+    display: flex;
+    gap: 0.25rem;
+    margin-right: 0.5rem;
+}
+
+.subtask-control-btn {
+    background: none;
+    border: none;
+    color: var(--gray-color);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.subtask-control-btn:hover {
+    background-color: var(--light-color);
+    color: var(--primary-color);
+}
+
+.subtask-control-btn:active {
+    transform: scale(0.95);
+}
+
 .folder-header {
     background-color: #f8f9fa;
     padding: 1rem;

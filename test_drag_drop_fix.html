@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drag and Drop Fix Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .board-container {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            min-height: 400px;
+        }
+        
+        .board-column {
+            flex: 1;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 0.5rem;
+        }
+        
+        .column-header {
+            background: #e9ecef;
+            padding: 0.75rem;
+            border-radius: 6px 6px 0 0;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .column-content {
+            min-height: 200px;
+            border: 2px dashed transparent;
+            border-radius: 4px;
+            padding: 0.5rem;
+        }
+        
+        .column-content.drag-over {
+            border-color: var(--primary-color);
+            background: rgba(0, 123, 255, 0.1);
+        }
+        
+        .task-item {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            cursor: move;
+            transition: all 0.2s ease;
+        }
+        
+        .task-item.dragging {
+            opacity: 0.5;
+            transform: rotate(2deg);
+        }
+        
+        .task-item:hover {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .controls {
+            margin: 1rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        
+        .btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 0.5rem;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+        }
+        
+        .console-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Drag and Drop Fix Test</h1>
+        
+        <div class="controls">
+            <button class="btn" onclick="addTestTask()">Add Test Task</button>
+            <button class="btn" onclick="clearConsole()">Clear Console</button>
+            <button class="btn" onclick="resetTasks()">Reset Tasks</button>
+        </div>
+        
+        <div class="board-container" id="board-container">
+            <div class="board-column">
+                <div class="column-header">
+                    <div class="column-title">To Do</div>
+                    <div class="column-points">0 pts</div>
+                </div>
+                <div class="column-content" data-status="todo">
+                    <div class="task-item" draggable="true" data-task-id="1">Task 1</div>
+                    <div class="task-item" draggable="true" data-task-id="2">Task 2</div>
+                    <div class="task-item" draggable="true" data-task-id="3">Task 3</div>
+                </div>
+            </div>
+            
+            <div class="board-column">
+                <div class="column-header">
+                    <div class="column-title">In Progress</div>
+                    <div class="column-points">0 pts</div>
+                </div>
+                <div class="column-content" data-status="in-progress">
+                    <p class="empty-state">No tasks</p>
+                </div>
+            </div>
+            
+            <div class="board-column">
+                <div class="column-header">
+                    <div class="column-title">Review</div>
+                    <div class="column-points">0 pts</div>
+                </div>
+                <div class="column-content" data-status="review">
+                    <p class="empty-state">No tasks</p>
+                </div>
+            </div>
+            
+            <div class="board-column">
+                <div class="column-header">
+                    <div class="column-title">Done</div>
+                    <div class="column-points">0 pts</div>
+                </div>
+                <div class="column-content" data-status="done">
+                    <p class="empty-state">No tasks</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="console-output" id="console-output">
+            <div>Console output will appear here...</div>
+        </div>
+    </div>
+
+    <script>
+        // Mock app object for testing
+        const app = {
+            draggedElement: null,
+            draggedTask: null,
+            
+            getTask: function(taskId) {
+                return {
+                    id: taskId,
+                    title: document.querySelector(`[data-task-id="${taskId}"]`).textContent,
+                    status: document.querySelector(`[data-task-id="${taskId}"]`).closest('.column-content').dataset.status,
+                    manualOrder: 0
+                };
+            },
+            
+            getFlatTasksForSprintBoard: function(sprintId) {
+                const allTasks = [];
+                document.querySelectorAll('.task-item').forEach(taskElement => {
+                    allTasks.push(this.getTask(taskElement.dataset.taskId));
+                });
+                return allTasks;
+            },
+            
+            updateTask: function(taskId, updates) {
+                const taskElement = document.querySelector(`[data-task-id="${taskId}"]`);
+                if (updates.status) {
+                    const newColumn = document.querySelector(`[data-status="${updates.status}"]`);
+                    if (newColumn) {
+                        newColumn.appendChild(taskElement);
+                        // Remove empty state if present
+                        const emptyState = newColumn.querySelector('.empty-state');
+                        if (emptyState) {
+                            emptyState.remove();
+                        }
+                    }
+                }
+                console.log('Task updated:', { taskId, updates });
+            },
+            
+            saveData: function() {
+                console.log('Data saved');
+            },
+            
+            renderSprintBoard: function() {
+                console.log('Sprint board re-rendered');
+            },
+            
+            handleSameColumnReorder: function(columnContent, event) {
+                if (!this.draggedTask || !this.draggedElement) return;
+                
+                // Get all task elements in this column
+                const taskElements = columnContent.querySelectorAll('.task-item');
+                let targetElement = null;
+                let insertBefore = false;
+                
+                // Find the target element and determine insert position
+                for (let element of taskElements) {
+                    if (element !== this.draggedElement) {
+                        const rect = element.getBoundingClientRect();
+                        const midpoint = rect.top + rect.height / 2;
+                        
+                        if (event.clientY < midpoint) {
+                            targetElement = element;
+                            insertBefore = true;
+                            break;
+                        }
+                    }
+                }
+                
+                // If no target element found, insert at the end
+                if (!targetElement) {
+                    // Find the last task element
+                    for (let i = taskElements.length - 1; i >= 0; i--) {
+                        if (taskElements[i] !== this.draggedElement) {
+                            targetElement = taskElements[i];
+                            insertBefore = false;
+                            break;
+                        }
+                    }
+                }
+                
+                if (targetElement) {
+                    const targetTask = this.getTask(targetElement.dataset.taskId);
+                    if (targetTask) {
+                        console.log('Reordering tasks within same column:', {
+                            draggedTask: this.draggedTask.title,
+                            targetTask: targetTask.title,
+                            insertBefore: insertBefore
+                        });
+                        
+                        // Reorder tasks in the data model
+                        this.reorderSprintBoardTasks(this.draggedTask, targetTask, insertBefore);
+                    }
+                }
+            },
+            
+            reorderSprintBoardTasks: function(draggedTask, targetTask, insertBefore) {
+                // Get all tasks for the current sprint
+                const allTasks = this.getFlatTasksForSprintBoard('test-sprint');
+                const statusTasks = allTasks.filter(task => task.status === draggedTask.status);
+                
+                // Find indices in the status-specific array
+                const draggedIndex = statusTasks.findIndex(task => task.id === draggedTask.id);
+                const targetIndex = statusTasks.findIndex(task => task.id === targetTask.id);
+                
+                if (draggedIndex === -1 || targetIndex === -1) return;
+                
+                console.log('Reordering sprint board tasks:', {
+                    draggedTask: draggedTask.title,
+                    targetTask: targetTask.title,
+                    insertBefore: insertBefore,
+                    draggedIndex: draggedIndex,
+                    targetIndex: targetIndex
+                });
+                
+                // Remove the dragged task from its current position
+                const [removedTask] = statusTasks.splice(draggedIndex, 1);
+                
+                // Insert it at the new position
+                const newIndex = insertBefore ? targetIndex : targetIndex + (draggedIndex < targetIndex ? 0 : 1);
+                statusTasks.splice(newIndex, 0, removedTask);
+                
+                // Update manual order for all tasks in this status to preserve the new ordering
+                statusTasks.forEach((task, index) => {
+                    task.manualOrder = index;
+                });
+                
+                this.saveData();
+                this.renderSprintBoard();
+                
+                // Update DOM to reflect the new order
+                this.updateDOMOrder(draggedTask, targetTask, insertBefore);
+            },
+            
+            updateDOMOrder: function(draggedTask, targetTask, insertBefore) {
+                const draggedElement = document.querySelector(`[data-task-id="${draggedTask.id}"]`);
+                const targetElement = document.querySelector(`[data-task-id="${targetTask.id}"]`);
+                const columnContent = draggedElement.closest('.column-content');
+                
+                if (insertBefore) {
+                    columnContent.insertBefore(draggedElement, targetElement);
+                } else {
+                    // Insert after target element
+                    if (targetElement.nextSibling) {
+                        columnContent.insertBefore(draggedElement, targetElement.nextSibling);
+                    } else {
+                        columnContent.appendChild(draggedElement);
+                    }
+                }
+            }
+        };
+        
+        // Setup drag and drop
+        function setupDragAndDrop() {
+            document.addEventListener('dragstart', (e) => {
+                if (e.target.classList.contains('task-item')) {
+                    app.draggedElement = e.target;
+                    app.draggedTask = app.getTask(e.target.dataset.taskId);
+                    e.target.classList.add('dragging');
+                    logToConsole('Drag started: ' + app.draggedTask.title);
+                }
+            });
+            
+            document.addEventListener('dragend', (e) => {
+                if (e.target.classList.contains('task-item')) {
+                    e.target.classList.remove('dragging');
+                    app.draggedElement = null;
+                    app.draggedTask = null;
+                    logToConsole('Drag ended');
+                }
+            });
+            
+            document.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const columnContent = e.target.closest('.column-content');
+                if (columnContent && app.draggedElement) {
+                    columnContent.classList.add('drag-over');
+                }
+            });
+            
+            document.addEventListener('dragleave', (e) => {
+                const columnContent = e.target.closest('.column-content');
+                if (columnContent) {
+                    columnContent.classList.remove('drag-over');
+                }
+            });
+            
+            document.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const columnContent = e.target.closest('.column-content');
+                if (columnContent && app.draggedElement && app.draggedTask) {
+                    columnContent.classList.remove('drag-over');
+                    
+                    // Check if this is a same-column reorder or cross-column status change
+                    const newStatus = columnContent.dataset.status;
+                    const isSameColumn = app.draggedTask.status === newStatus;
+                    
+                    if (isSameColumn) {
+                        logToConsole('Same column reorder detected');
+                        // Handle same-column reordering
+                        app.handleSameColumnReorder(columnContent, e);
+                    } else {
+                        logToConsole('Cross-column status change detected');
+                        // Handle cross-column status change
+                        app.updateTask(app.draggedTask.id, {
+                            status: newStatus
+                        });
+                        
+                        // Refresh the board
+                        app.renderSprintBoard();
+                    }
+                }
+            });
+        }
+        
+        // Utility functions
+        function logToConsole(message) {
+            const consoleOutput = document.getElementById('console-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            consoleOutput.appendChild(logEntry);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        function addTestTask() {
+            const todoColumn = document.querySelector('[data-status="todo"]');
+            const taskCount = todoColumn.querySelectorAll('.task-item').length + 1;
+            
+            const taskElement = document.createElement('div');
+            taskElement.className = 'task-item';
+            taskElement.draggable = true;
+            taskElement.dataset.taskId = Date.now().toString();
+            taskElement.textContent = `Test Task ${taskCount}`;
+            
+            // Remove empty state if present
+            const emptyState = todoColumn.querySelector('.empty-state');
+            if (emptyState) {
+                emptyState.remove();
+            }
+            
+            todoColumn.appendChild(taskElement);
+            logToConsole('Added test task: Test Task ' + taskCount);
+        }
+        
+        function clearConsole() {
+            const consoleOutput = document.getElementById('console-output');
+            consoleOutput.innerHTML = '<div>Console output will appear here...</div>';
+        }
+        
+        function resetTasks() {
+            const todoColumn = document.querySelector('[data-status="todo"]');
+            todoColumn.innerHTML = `
+                <div class="task-item" draggable="true" data-task-id="1">Task 1</div>
+                <div class="task-item" draggable="true" data-task-id="2">Task 2</div>
+                <div class="task-item" draggable="true" data-task-id="3">Task 3</div>
+            `;
+            
+            // Clear other columns
+            document.querySelectorAll('[data-status="in-progress"], [data-status="review"], [data-status="done"]').forEach(column => {
+                column.innerHTML = '<p class="empty-state">No tasks</p>';
+            });
+            
+            clearConsole();
+            logToConsole('Tasks reset to initial state');
+        }
+        
+        // Initialize drag and drop when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            setupDragAndDrop();
+            logToConsole('Drag and drop initialized');
+        });
+    </script>
+</body>
+</html>
