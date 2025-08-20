@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Assignment Fix</title>
+    <script src="app.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .test-button.danger {
+            background: #dc3545;
+        }
+        .test-button.danger:hover {
+            background: #c82333;
+        }
+        .console-output {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+            white-space: pre-wrap;
+        }
+        .task-info {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 5px 0;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status.todo { background: #6c757d; color: white; }
+        .status.in-progress { background: #007bff; color: white; }
+        .status.review { background: #ffc107; color: black; }
+        .status.done { background: #28a745; color: white; }
+        .status.backlog { background: #e9ecef; color: #495057; }
+        .sprint-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .board-column {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            min-height: 200px;
+        }
+        .board-column h3 {
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .task-card {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 8px;
+            margin: 5px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Assignment Fix</h1>
+        
+        <div class="test-section">
+            <h2>Setup</h2>
+            <button class="test-button" onclick="clearConsole()">Clear Console</button>
+            <button class="test-button" onclick="resetData()">Reset Data</button>
+            <button class="test-button" onclick="setupTestData()">Setup Test Data</button>
+        </div>
+
+        <div class="test-section">
+            <h2>Test Assignment</h2>
+            <button class="test-button" onclick="testAssignment()">Test Task Assignment</button>
+            <button class="test-button" onclick="checkBoardDisplay()">Check Board Display</button>
+        </div>
+
+        <div class="test-section">
+            <h2>Console Output</h2>
+            <div id="console" class="console-output"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Current Tasks</h2>
+            <div id="current-tasks"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>Sprint Board</h2>
+            <div id="sprint-board" class="sprint-board"></div>
+        </div>
+    </div>
+
+    <script>
+        let consoleOutput = [];
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${message}`;
+            consoleOutput.push(logMessage);
+            updateConsole();
+            console.log(logMessage);
+        }
+
+        function updateConsole() {
+            document.getElementById('console').textContent = consoleOutput.join('\n');
+        }
+
+        function clearConsole() {
+            consoleOutput = [];
+            updateConsole();
+        }
+
+        function resetData() {
+            if (confirm('Reset all data?')) {
+                app.resetAllData();
+                log('Data reset');
+                updateDisplays();
+            }
+        }
+
+        function setupTestData() {
+            log('=== Setting up Test Data ===');
+            
+            // Create a sprint
+            const sprint = app.createSprint({
+                name: 'Test Sprint',
+                startDate: '2025-01-01',
+                endDate: '2025-01-14',
+                duration: 14
+            });
+            log(`Created sprint: ${sprint.name} (ID: ${sprint.id})`);
+            
+            // Create a backlog task
+            const task = app.createTask({
+                title: 'Test Task',
+                description: 'Task for testing assignment',
+                points: 3,
+                priority: 'medium'
+            });
+            log(`Created task: ${task.title} (ID: ${task.id}, Status: ${task.status}, Sprint: ${task.sprintId})`);
+            
+            updateDisplays();
+        }
+
+        function testAssignment() {
+            log('=== Testing Task Assignment ===');
+            
+            const sprints = app.sprints;
+            const tasks = app.tasks;
+            
+            if (sprints.length === 0) {
+                log('ERROR: No sprints available');
+                return;
+            }
+            if (tasks.length === 0) {
+                log('ERROR: No tasks available');
+                return;
+            }
+            
+            const sprintId = sprints[0].id;
+            const backlogTask = tasks.find(task => task.sprintId === null);
+            
+            if (!backlogTask) {
+                log('ERROR: No backlog tasks found');
+                return;
+            }
+            
+            log(`Assigning task "${backlogTask.title}" to sprint "${sprints[0].name}"`);
+            log(`BEFORE: Status=${backlogTask.status}, Sprint=${backlogTask.sprintId}`);
+            
+            // Call the assignment method
+            app.assignTaskToSprint(backlogTask.id, sprintId);
+            
+            // Check the updated task
+            const updatedTask = app.getTask(backlogTask.id);
+            log(`AFTER: Status=${updatedTask.status}, Sprint=${updatedTask.sprintId}`);
+            
+            // Test if the task appears in sprint board
+            const boardTasks = app.getFlatTasksForSprintBoard(sprintId);
+            const taskInBoard = boardTasks.find(t => t.id === updatedTask.id);
+            log(`Task in sprint board: ${taskInBoard ? 'YES' : 'NO'}`);
+            
+            updateDisplays();
+        }
+
+        function checkBoardDisplay() {
+            log('=== Checking Board Display ===');
+            
+            const sprints = app.sprints;
+            if (sprints.length === 0) {
+                log('No sprints available');
+                return;
+            }
+            
+            const sprintId = sprints[0].id;
+            const boardTasks = app.getFlatTasksForSprintBoard(sprintId);
+            
+            log(`Sprint board contains ${boardTasks.length} tasks:`);
+            boardTasks.forEach(task => {
+                log(`  - ${task.title}: status=${task.status}, sprint=${task.sprintId}`);
+            });
+            
+            updateDisplays();
+        }
+
+        function updateDisplays() {
+            updateCurrentTasks();
+            updateSprintBoard();
+        }
+
+        function updateCurrentTasks() {
+            const tasksDiv = document.getElementById('current-tasks');
+            const tasks = app.tasks;
+            const sprints = app.sprints;
+            
+            let html = '';
+            tasks.forEach(task => {
+                const sprintName = task.sprintId ? sprints.find(s => s.id === task.sprintId)?.name || 'Unknown' : 'None';
+                html += `
+                    <div class="task-info">
+                        <strong>${task.title}</strong>
+                        <span class="status-badge ${task.status}">${task.status}</span>
+                        <br>
+                        <small>Sprint: ${sprintName} | Points: ${task.points}</small>
+                    </div>
+                `;
+            });
+            
+            tasksDiv.innerHTML = html || '<p>No tasks found</p>';
+        }
+
+        function updateSprintBoard() {
+            const boardDiv = document.getElementById('sprint-board');
+            const sprints = app.sprints;
+            
+            if (sprints.length === 0) {
+                boardDiv.innerHTML = '<p>No sprints available</p>';
+                return;
+            }
+            
+            const sprintId = sprints[0].id;
+            const tasks = app.getFlatTasksForSprintBoard(sprintId);
+            const boardStatuses = app.getBoardStatuses();
+            
+            let html = '';
+            boardStatuses.forEach(status => {
+                const statusTasks = tasks.filter(task => task.status === status.id);
+                html += `
+                    <div class="board-column">
+                        <h3>${status.name}</h3>
+                        ${statusTasks.map(task => `
+                            <div class="task-card">
+                                <div>${task.title}</div>
+                                <small>Points: ${task.points}</small>
+                            </div>
+                        `).join('')}
+                        ${statusTasks.length === 0 ? '<small>No tasks</small>' : ''}
+                    </div>
+                `;
+            });
+            
+            boardDiv.innerHTML = html;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            log('Test Assignment Fix initialized');
+            updateDisplays();
+        });
+    </script>
+</body>
+</html>

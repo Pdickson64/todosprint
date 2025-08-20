@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Sprint Board Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .test-section h3 { margin-top: 0; color: #333; }
+        .log { background: #f5f5f5; padding: 10px; border-radius: 3px; font-family: monospace; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .info { color: #17a2b8; font-weight: bold; }
+        button { margin: 5px; padding: 8px 15px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>Test Sprint Board Fix</h1>
+    
+    <div class="test-section">
+        <h3>Test 1: Create Sprint and Task</h3>
+        <button onclick="test1()">Run Test</button>
+        <div class="log" id="test1-log"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 2: Assign Task to Sprint</h3>
+        <button onclick="test2()">Run Test</button>
+        <div class="log" id="test2-log"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 3: Check Sprint Board</h3>
+        <button onclick="test3()">Run Test</button>
+        <div class="log" id="test3-log"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Test 4: Test assignTaskToSprint Method</h3>
+        <button onclick="test4()">Run Test</button>
+        <div class="log" id="test4-log"></div>
+    </div>
+    
+    <script src="app.js"></script>
+    <script>
+        function log(message, type = 'info', elementId) {
+            const logElement = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.innerHTML += `<span class="${type}">[${timestamp}] ${message}</span>\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function clearLog(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+        
+        function test1() {
+            clearLog('test1-log');
+            log('=== Test 1: Create Sprint and Task ===', 'info', 'test1-log');
+            
+            try {
+                // Create sprint
+                const sprint = app.createSprint({
+                    name: 'Test Sprint',
+                    startDate: '2025-08-17',
+                    endDate: '2025-08-24',
+                    duration: 7
+                });
+                log(`Created sprint: ${sprint.name} (ID: ${sprint.id})`, 'success', 'test1-log');
+                
+                // Create task with sprint assignment
+                const task = app.createTask({
+                    title: 'Test Task for Sprint',
+                    description: 'This should appear on sprint board',
+                    points: 5,
+                    priority: 'high',
+                    sprintId: sprint.id
+                });
+                log(`Created task: ${task.title}`, 'success', 'test1-log');
+                log(`Task sprint ID: ${task.sprintId}`, 'info', 'test1-log');
+                log(`Task status: ${task.status}`, 'info', 'test1-log');
+                
+                // Verify the fix
+                if (task.sprintId === sprint.id && task.status === 'todo') {
+                    log('✓ Task correctly assigned to sprint with todo status', 'success', 'test1-log');
+                } else {
+                    log('✗ Task assignment failed', 'error', 'test1-log');
+                }
+                
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error', 'test1-log');
+            }
+        }
+        
+        function test2() {
+            clearLog('test2-log');
+            log('=== Test 2: Assign Task to Sprint ===', 'info', 'test2-log');
+            
+            try {
+                // Get existing sprint
+                const sprints = app.sprints;
+                if (sprints.length === 0) {
+                    log('No sprints found. Please run Test 1 first.', 'error', 'test2-log');
+                    return;
+                }
+                
+                const sprint = sprints[0];
+                log(`Using sprint: ${sprint.name} (ID: ${sprint.id})`, 'info', 'test2-log');
+                
+                // Create task without sprint assignment
+                const task = app.createTask({
+                    title: 'Task to be assigned',
+                    description: 'This will be assigned to sprint',
+                    points: 3,
+                    priority: 'medium'
+                });
+                log(`Created task: ${task.title}`, 'success', 'test2-log');
+                log(`Initial task status: ${task.status}`, 'info', 'test2-log');
+                
+                // Assign task to sprint using our fixed method
+                app.assignTaskToSprint(task.id, sprint.id);
+                log(`Assigned task to sprint ${sprint.id}`, 'success', 'test2-log');
+                log(`Updated task status: ${task.status}`, 'info', 'test2-log');
+                log(`Updated task sprint ID: ${task.sprintId}`, 'info', 'test2-log');
+                
+                // Verify the fix
+                if (task.sprintId === sprint.id && task.status === 'todo') {
+                    log('✓ Task correctly assigned to sprint with todo status', 'success', 'test2-log');
+                } else {
+                    log('✗ Task assignment failed', 'error', 'test2-log');
+                }
+                
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error', 'test2-log');
+            }
+        }
+        
+        function test3() {
+            clearLog('test3-log');
+            log('=== Test 3: Check Sprint Board ===', 'info', 'test3-log');
+            
+            try {
+                // Get existing sprint
+                const sprints = app.sprints;
+                if (sprints.length === 0) {
+                    log('No sprints found. Please run Test 1 first.', 'error', 'test3-log');
+                    return;
+                }
+                
+                const sprint = sprints[0];
+                log(`Checking sprint board for: ${sprint.name} (ID: ${sprint.id})`, 'info', 'test3-log');
+                
+                // Set current sprint
+                app.currentSprint = sprint;
+                log(`Set current sprint to: ${app.currentSprint.name}`, 'success', 'test3-log');
+                
+                // Test getFlatTasksForSprintBoard
+                const flatTasks = app.getFlatTasksForSprintBoard(sprint.id);
+                log(`Found ${flatTasks.length} tasks for sprint board`, 'info', 'test3-log');
+                
+                if (flatTasks.length > 0) {
+                    log('Tasks found in sprint board:', 'success', 'test3-log');
+                    flatTasks.forEach((task, index) => {
+                        log(`  ${index + 1}. ${task.title} (Status: ${task.status})`, 'info', 'test3-log');
+                    });
+                    
+                    // Check if any tasks have 'todo' status
+                    const todoTasks = flatTasks.filter(task => task.status === 'todo');
+                    if (todoTasks.length > 0) {
+                        log(`✓ Found ${todoTasks.length} tasks with 'todo' status`, 'success', 'test3-log');
+                    } else {
+                        log('✗ No tasks with todo status found', 'error', 'test3-log');
+                    }
+                } else {
+                    log('✗ No tasks found in sprint board', 'error', 'test3-log');
+                }
+                
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error', 'test3-log');
+            }
+        }
+        
+        function test4() {
+            clearLog('test4-log');
+            log('=== Test 4: Test assignTaskToSprint Method ===', 'info', 'test4-log');
+            
+            try {
+                // Get existing sprint
+                const sprints = app.sprints;
+                if (sprints.length === 0) {
+                    log('No sprints found. Please run Test 1 first.', 'error', 'test4-log');
+                    return;
+                }
+                
+                const sprint = sprints[0];
+                log(`Using sprint: ${sprint.name} (ID: ${sprint.id})`, 'info', 'test4-log');
+                
+                // Create task without sprint assignment
+                const task = app.createTask({
+                    title: 'Final test task',
+                    description: 'Testing the fixed assignTaskToSprint method',
+                    points: 2,
+                    priority: 'low'
+                });
+                log(`Created task: ${task.title}`, 'success', 'test4-log');
+                log(`Initial task status: ${task.status}`, 'info', 'test4-log');
+                
+                // Mock the sprint selector
+                const mockSprintSelector = {
+                    value: sprint.id
+                };
+                document.getElementById = function(id) {
+                    if (id === 'sprint-selector') return mockSprintSelector;
+                    return null;
+                };
+                
+                // Test the fixed method
+                app.assignTaskToSprint(task.id, sprint.id);
+                log(`Called assignTaskToSprint(${task.id}, ${sprint.id})`, 'info', 'test4-log');
+                
+                // Check results
+                log(`Updated task status: ${task.status}`, 'info', 'test4-log');
+                log(`Updated task sprint ID: ${task.sprintId}`, 'info', 'test4-log');
+                log(`Current sprint: ${app.currentSprint ? app.currentSprint.name : 'None'}`, 'info', 'test4-log');
+                
+                // Verify the fix
+                if (task.sprintId === sprint.id && task.status === 'todo' && app.currentSprint) {
+                    log('✓ assignTaskToSprint method working correctly', 'success', 'test4-log');
+                    log('✓ Task status updated to todo', 'success', 'test4-log');
+                    log('✓ Current sprint set correctly', 'success', 'test4-log');
+                } else {
+                    log('✗ assignTaskToSprint method has issues', 'error', 'test4-log');
+                    if (task.sprintId !== sprint.id) log(`  - Sprint ID mismatch: expected ${sprint.id}, got ${task.sprintId}`, 'error', 'test4-log');
+                    if (task.status !== 'todo') log(`  - Status mismatch: expected todo, got ${task.status}`, 'error', 'test4-log');
+                    if (!app.currentSprint) log(`  - Current sprint not set`, 'error', 'test4-log');
+                }
+                
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error', 'test4-log');
+            }
+        }
+    </script>
+</body>
+</html>

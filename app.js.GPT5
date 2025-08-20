@@ -184,10 +184,6 @@ function SprintTodoApp() {
     
     SprintTodoApp.prototype.getBoardStatuses = function() {
         console.log('getBoardStatuses called, returning:', this.boardStatuses);
-        console.log('Board statuses array length:', this.boardStatuses.length);
-        this.boardStatuses.forEach((status, index) => {
-            console.log(`Status ${index}:`, status);
-        });
         return this.boardStatuses;
     }
 
@@ -501,8 +497,7 @@ function SprintTodoApp() {
                 updatedAt: new Date().toISOString()
             };
             
-            console.log('Task updated in array:', { oldTask, newTask: this.tasks[taskIndex] });
-            console.log('Task object reference check - should match:', this.tasks[taskIndex] === this.getTask(taskId));
+            console.log('Task updated:', { oldTask, newTask: this.tasks[taskIndex] });
             
             // Add to activity log
             if (updates.comment) {
@@ -1358,10 +1353,9 @@ function SprintTodoApp() {
         // Render standalone subtasks (subtasks that are not nested under a parent)
         subtasks.forEach(subtask => {
             const parentTask = this.getTask(subtask.parentTaskId);
-            // Only render standalone subtasks if the parent doesn't exist (orphaned subtasks)
-            // Don't show subtasks when parent is collapsed
-            if (!parentTask) {
-                console.log('Creating standalone subtask row for orphaned subtask:', {
+            // Only render standalone subtasks if the parent is not expanded or doesn't exist
+            if (!parentTask || parentTask.expanded === false) {
+                console.log('Creating standalone subtask row for:', {
                     subtaskId: subtask.id,
                     subtaskTitle: subtask.title,
                     parentTaskId: subtask.parentTaskId,
@@ -3199,81 +3193,101 @@ function SprintTodoApp() {
     }
 
     SprintTodoApp.prototype.assignTaskToSprint = function(taskId, sprintId) {
-        console.log('assignTaskToSprint called:', { taskId, sprintId });
-        if (!taskId) return;
+    console.log('assignTaskToSprint called:', { taskId, sprintId });
+    if (!taskId) return;
 
-        const task = this.getTask(taskId);
-        if (!task) {
-            console.error('Task not found:', taskId);
-            return;
-        }
+    const task = this.getTask(taskId);
+    if (!task) return;
 
-        console.log('Task before assignment:', task);
+    let newStatus;
+    if (sprintId) {
+        const statuses = (this.getBoardStatuses ? this.getBoardStatuses() : [])
+            .slice()
+            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+        newStatus = statuses.length > 0 ? (statuses[0].id || statuses[0].name || 'todo') : 'todo';
+    } else {
+        newStatus = 'backlog';
+    }
 
-        let newStatus;
-        if (sprintId) {
-            // Use the first status of the sprint board
-            const statuses = this.getBoardStatuses();
-            console.log('Available board statuses:', statuses);
-            
-            // Sort by order to get the first status
-            const sortedStatuses = statuses.sort((a, b) => (a.order || 0) - (b.order || 0));
-            console.log('Sorted board statuses:', sortedStatuses);
-            
-            newStatus = sortedStatuses.length > 0 ? sortedStatuses[0].id : 'todo';
-            console.log('Selected new status:', newStatus);
+    const updates = { sprintId: sprintId || null, status: newStatus };
+    Object.assign(task, updates, { updatedAt: new Date().toISOString() });
+    const updatedTask = this.updateTask(taskId, updates);
+
+    if (updatedTask) {
+        const sprint = sprintId ? this.getSprint(sprintId) : null;
+        if (sprint) {
+            if (this.showNotification) this.showNotification(`Task assigned to ${sprint.name}`);
         } else {
-            newStatus = 'backlog';
+            if (this.showNotification) this.showNotification('Task removed from sprint');
         }
+        if (this.currentSprint) this.renderSprintBoard();
+    }
+};
 
-        console.log('Final updates to apply:', { sprintId: sprintId || null, status: newStatus });
+    Object.assign(task, updates, { updatedAt: new Date().toISOString() });
+    const updatedTask = this.updateTask(taskId, updates);
 
-        // Update the task object directly first to ensure immediate reflection
-        const updates = { sprintId: sprintId || null, status: newStatus };
-        Object.assign(task, updates, { updatedAt: new Date().toISOString() });
+    if (updatedTask) {
+        const sprint = sprintId ? this.getSprint(sprintId) : null;
+        if (sprint) {
+            this.showNotification && this.showNotification(`Task assigned to ${sprint.name}`);
+        } else {
+            this.showNotification && this.showNotification('Task removed from sprint');
+        }
+        if (this.currentSprint) this.renderSprintBoard();
+    }
+};
+
         
-        console.log('Task after direct update:', task);
-
+        console.log('Updates to apply:', updates);
+        
+        // Update the task object directly first to ensure immediate reflection
+        Object.assign(task, updates, {
+            updatedAt: new Date().toISOString()
+        });
+        
         // Then use updateTask method to save and trigger refreshes
         const updatedTask = this.updateTask(taskId, updates);
         
-        console.log('Task after updateTask call:', updatedTask);
-
-        if (updatedTask) {
-            const sprint = sprintId ? this.getSprint(sprintId) : null;
-            if (sprint) {
-                this.showNotification(`Task assigned to ${sprint.name}`);
-                
-                // Update current sprint if this assignment is from the backlog
-                if (this.currentView === 'backlog') {
-                    this.currentSprint = sprint;
-                    // Update sprint selector if it exists
-                    const sprintSelector = document.getElementById('sprint-selector');
-                    if (sprintSelector) {
-                        sprintSelector.value = sprintId;
-                    }
-                }
-            } else {
-                this.showNotification('Task removed from sprint');
-            }
+        if (!updatedTask) {
+            console.error('Failed to update task:', taskId);
+            return;
+        }
+        
+        console.log('Task after update:', updatedTask);
+        
+        // Show notification
+        if (sprintId) {
+            const sprint = this.getSprint(sprintId);
+            this.showNotification(`Task assigned to ${sprint.name}`);
             
-            // Refresh the task table if we're in backlog view
+            // Update current sprint if this assignment is from the backlog
             if (this.currentView === 'backlog') {
-                const activeFolder = document.querySelector('.folder-item.active');
-                if (activeFolder) {
-                    const folderId = activeFolder.dataset.folderId || 'all';
-                    this.renderTasks(folderId);
+                this.currentSprint = sprint;
+                // Update sprint selector if it exists
+                const sprintSelector = document.getElementById('sprint-selector');
+                if (sprintSelector) {
+                    sprintSelector.value = sprintId;
                 }
-            }
-            
-            // Always refresh the sprint board if we have a current sprint
-            // This ensures tasks appear on the board when assigned from backlog
-            if (this.currentSprint) {
-                console.log('Refreshing sprint board for current sprint:', this.currentSprint.id);
-                this.renderSprintBoard();
             }
         } else {
-            console.error('Failed to update task:', taskId);
+            this.showNotification('Task removed from sprint');
+        }
+        
+        // Refresh the task table if we're in backlog view
+        if (this.currentView === 'backlog') {
+            const activeFolder = document.querySelector('.folder-item.active');
+            if (activeFolder) {
+                const folderId = activeFolder.dataset.folderId || 'all';
+                this.renderTasks(folderId);
+            }
+        }
+        
+        // Always refresh the sprint board if we have a current sprint
+        // This ensures tasks appear on the board when assigned from backlog
+        if (this.currentSprint) {
+            console.log('Refreshing sprint board for current sprint:', this.currentSprint.id);
+            this.renderSprintBoard();
         }
     }
 
@@ -3527,27 +3541,6 @@ function SprintTodoApp() {
         const taskId = taskData.id;
         
         if (taskId) {
-            // Update existing task - check if sprint assignment changed and update status accordingly
-            const existingTask = this.getTask(taskId);
-            const sprintChanged = existingTask && existingTask.sprintId !== taskData.sprintId;
-            
-            // If sprint assignment changed, update status based on new sprint assignment
-            if (sprintChanged && taskData.sprintId) {
-                // Use the first status of the sprint board
-                const statuses = this.getBoardStatuses();
-                const sortedStatuses = statuses.sort((a, b) => (a.order || 0) - (b.order || 0));
-                const newStatus = sortedStatuses.length > 0 ? sortedStatuses[0].id : 'todo';
-                
-                // Update taskData with the new status
-                taskData.status = newStatus;
-                
-                console.log('Sprint assignment changed, updating status to:', newStatus);
-            } else if (sprintChanged && !taskData.sprintId) {
-                // Task removed from sprint, set to backlog
-                taskData.status = 'backlog';
-                console.log('Task removed from sprint, setting status to: backlog');
-            }
-            
             // Update existing task
             this.updateTask(taskId, taskData);
             this.showNotification('Task updated successfully!');

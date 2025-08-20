@@ -8,203 +8,485 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 1200px;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1000px;
             margin: 0 auto;
+            background: white;
             padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         .debug-section {
             margin: 20px 0;
             padding: 15px;
             border: 1px solid #ddd;
             border-radius: 5px;
-            background-color: #f9f9f9;
+            background: #f9f9f9;
         }
-        .test-section {
-            margin: 20px 0;
-            padding: 15px;
-            border: 1px solid #007bff;
-            border-radius: 5px;
-            background-color: #e7f3ff;
-        }
-        .button-group {
-            margin: 10px 0;
-        }
-        button {
-            padding: 8px 16px;
-            margin: 5px;
+        .debug-button {
+            background: #007bff;
+            color: white;
             border: none;
+            padding: 8px 12px;
+            margin: 5px;
             border-radius: 4px;
             cursor: pointer;
-            background-color: #007bff;
-            color: white;
+            font-size: 14px;
         }
-        button:hover {
-            background-color: #0056b3;
+        .debug-button:hover {
+            background: #0056b3;
+        }
+        .debug-button.danger {
+            background: #dc3545;
+        }
+        .debug-button.danger:hover {
+            background: #c82333;
         }
         .console-output {
-            background-color: #1e1e1e;
+            background: #1e1e1e;
             color: #00ff00;
-            padding: 10px;
-            border-radius: 4px;
+            padding: 15px;
+            border-radius: 5px;
             font-family: monospace;
             font-size: 12px;
             max-height: 400px;
             overflow-y: auto;
             margin: 10px 0;
+            white-space: pre-wrap;
         }
         .task-info {
-            background-color: #fff;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
             padding: 10px;
             margin: 5px 0;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .status.todo { background: #6c757d; color: white; }
+        .status.in-progress { background: #007bff; color: white; }
+        .status.review { background: #ffc107; color: black; }
+        .status.done { background: #28a745; color: white; }
+        .status.backlog { background: #e9ecef; color: #495057; }
+        .sprint-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .board-column {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            min-height: 200px;
+        }
+        .board-column h3 {
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .task-card {
+            background: white;
+            border: 1px solid #dee2e6;
             border-radius: 4px;
-            border-left: 4px solid #007bff;
+            padding: 8px;
+            margin: 5px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
     </style>
 </head>
 <body>
-    <h1>Debug Sprint Assignment Issue</h1>
-    <p>This page helps debug the issue where tasks assigned to sprints don't appear on the sprint board.</p>
-    
-    <div class="debug-section">
-        <h2>Current App State</h2>
-        <div class="button-group">
-            <button onclick="showCurrentState()">Show Current State</button>
-            <button onclick="clearConsole()">Clear Console</button>
+    <div class="container">
+        <h1>Debug Sprint Assignment Issue</h1>
+        
+        <div class="debug-section">
+            <h2>Setup</h2>
+            <button class="debug-button" onclick="clearConsole()">Clear Console</button>
+            <button class="debug-button" onclick="resetData()">Reset Data</button>
+            <button class="debug-button" onclick="setupTestData()">Setup Test Data</button>
         </div>
-        <div id="current-state"></div>
-    </div>
-    
-    <div class="test-section">
-        <h2>Test Scenario</h2>
-        <p>1. Create a task without sprint assignment</p>
-        <p>2. Assign it to a sprint using the dropdown</p>
-        <p>3. Check if it appears on the sprint board</p>
-        <div class="button-group">
-            <button onclick="createTestTask()">Create Test Task</button>
-            <button onclick="viewSprintBoard()">View Sprint Board</button>
-            <button onclick="showConsoleOutput()">Show Console Output</button>
+
+        <div class="debug-section">
+            <h2>Task Assignment Tests</h2>
+            <button class="debug-button" onclick="testCreateBacklogTask()">Create Backlog Task</button>
+            <button class="debug-button" onclick="testAssignToSprint()">Assign to Sprint</button>
+            <button class="debug-button" onclick="testBoardDisplay()">Check Board Display</button>
+            <button class="debug-button" onclick="testDirectTaskUpdate()">Test Direct Task Update</button>
         </div>
-    </div>
-    
-    <div class="debug-section">
-        <h2>Console Output</h2>
-        <div id="console-output" class="console-output"></div>
+
+        <div class="debug-section">
+            <h2>Debug Information</h2>
+            <button class="debug-button" onclick="debugTaskAssignment()">Debug Assignment Flow</button>
+            <button class="debug-button" onclick="debugBoardFiltering()">Debug Board Filtering</button>
+            <button class="debug-button" onclick="debugDataConsistency()">Check Data Consistency</button>
+        </div>
+
+        <div class="debug-section">
+            <h2>Console Output</h2>
+            <div id="console" class="console-output"></div>
+        </div>
+
+        <div class="debug-section">
+            <h2>Current Tasks</h2>
+            <div id="current-tasks"></div>
+        </div>
+
+        <div class="debug-section">
+            <h2>Sprint Board Preview</h2>
+            <div id="sprint-board" class="sprint-board"></div>
+        </div>
     </div>
 
     <script>
-        let app;
-        let consoleLogs = [];
+        let consoleOutput = [];
         
-        // Override console.log to capture output
-        const originalConsoleLog = console.log;
-        console.log = function(...args) {
-            consoleLogs.push(args.join(' '));
-            originalConsoleLog.apply(console, args);
-        };
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            app = new SprintTodoApp();
-            
-            // Create a test sprint if none exists
-            if (app.sprints.length === 0) {
-                const testSprint = app.createSprint({
-                    name: 'Test Sprint',
-                    startDate: '2025-01-01',
-                    endDate: '2025-01-14',
-                    duration: 14
-                });
-                console.log('Created test sprint:', testSprint);
-            }
-            
-            showCurrentState();
-        });
-        
-        function showCurrentState() {
-            const stateDiv = document.getElementById('current-state');
-            
-            let html = '<h3>Sprints:</h3>';
-            app.sprints.forEach(sprint => {
-                const sprintTasks = app.getTasksBySprint(sprint.id);
-                html += `<div class="task-info">
-                    <strong>${sprint.name}</strong> (ID: ${sprint.id})
-                    <br>Tasks: ${sprintTasks.length}
-                    <br>Status: ${sprint.status}
-                </div>`;
-            });
-            
-            html += '<h3>Tasks in Backlog:</h3>';
-            const backlogTasks = app.tasks.filter(t => !t.sprintId);
-            backlogTasks.forEach(task => {
-                html += `<div class="task-info">
-                    <strong>${task.title}</strong> (ID: ${task.id})
-                    <br>Status: ${task.status}
-                    <br>Sprint: ${task.sprintId || 'None'}
-                </div>`;
-            });
-            
-            html += '<h3>Tasks in Sprints:</h3>';
-            const sprintTasks = [];
-            app.sprints.forEach(sprint => {
-                const tasks = app.getTasksBySprint(sprint.id);
-                tasks.forEach(task => {
-                    sprintTasks.push({
-                        sprint: sprint.name,
-                        task: task,
-                        status: task.status
-                    });
-                });
-            });
-            
-            if (sprintTasks.length === 0) {
-                html += '<p>No tasks found in sprints.</p>';
-            } else {
-                sprintTasks.forEach(item => {
-                    html += `<div class="task-info">
-                        <strong>${item.task.title}</strong> (Sprint: ${item.sprint})
-                        <br>Status: ${item.status}
-                        <br>Sprint ID: ${item.task.sprintId}
-                    </div>`;
-                });
-            }
-            
-            stateDiv.innerHTML = html;
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logMessage = `[${timestamp}] ${message}`;
+            consoleOutput.push(logMessage);
+            updateConsole();
+            console.log(logMessage);
         }
-        
-        function createTestTask() {
+
+        function updateConsole() {
+            document.getElementById('console').textContent = consoleOutput.join('\n');
+        }
+
+        function clearConsole() {
+            consoleOutput = [];
+            updateConsole();
+        }
+
+        function resetData() {
+            if (confirm('Reset all data?')) {
+                app.resetAllData();
+                log('Data reset');
+                updateDisplays();
+            }
+        }
+
+        function setupTestData() {
+            log('=== Setting up Test Data ===');
+            
+            // Create a sprint
+            const sprint = app.createSprint({
+                name: 'Debug Sprint',
+                startDate: '2025-01-01',
+                endDate: '2025-01-14',
+                duration: 14
+            });
+            log(`Created sprint: ${sprint.name} (ID: ${sprint.id})`);
+            
+            // Create a backlog task
             const task = app.createTask({
-                title: 'Test Task for Sprint Assignment',
-                description: 'This task will be assigned to a sprint',
+                title: 'Debug Task',
+                description: 'Task for testing assignment',
                 points: 3,
                 priority: 'medium'
             });
+            log(`Created task: ${task.title} (ID: ${task.id}, Status: ${task.status}, Sprint: ${task.sprintId})`);
             
-            console.log('Created test task:', task);
-            showCurrentState();
+            updateDisplays();
         }
-        
-        function viewSprintBoard() {
-            if (app.sprints.length > 0) {
-                const sprintId = app.sprints[0].id;
-                app.viewSprintBoard(sprintId);
-                console.log('Viewing sprint board for sprint:', sprintId);
+
+        function testCreateBacklogTask() {
+            log('=== Creating Backlog Task ===');
+            const task = app.createTask({
+                title: `Backlog Task ${Date.now()}`,
+                description: 'Created for testing',
+                points: 2,
+                priority: 'medium'
+            });
+            log(`Created task: ${task.title} (Status: ${task.status}, Sprint: ${task.sprintId})`);
+            updateDisplays();
+        }
+
+        function testAssignToSprint() {
+            log('=== Testing Task Assignment to Sprint ===');
+            
+            const sprints = app.sprints;
+            const tasks = app.tasks;
+            
+            if (sprints.length === 0) {
+                log('ERROR: No sprints available');
+                return;
+            }
+            if (tasks.length === 0) {
+                log('ERROR: No tasks available');
+                return;
+            }
+            
+            const sprintId = sprints[0].id;
+            const backlogTask = tasks.find(task => task.sprintId === null);
+            
+            if (!backlogTask) {
+                log('ERROR: No backlog tasks found');
+                return;
+            }
+            
+            log(`Assigning task "${backlogTask.title}" (ID: ${backlogTask.id}) to sprint "${sprints[0].name}" (ID: ${sprintId})`);
+            
+            // Log current state
+            log(`BEFORE ASSIGNMENT:`);
+            log(`  Task status: ${backlogTask.status}`);
+            log(`  Task sprintId: ${backlogTask.sprintId}`);
+            log(`  Task object:`, JSON.stringify(backlogTask, null, 2));
+            
+            // Call the assignment method
+            app.assignTaskToSprint(backlogTask.id, sprintId);
+            
+            // Check the updated task
+            const updatedTask = app.getTask(backlogTask.id);
+            log(`AFTER ASSIGNMENT:`);
+            log(`  Task status: ${updatedTask.status}`);
+            log(`  Task sprintId: ${updatedTask.sprintId}`);
+            log(`  Task object:`, JSON.stringify(updatedTask, null, 2));
+            
+            // Test if the task appears in sprint board
+            const boardTasks = app.getFlatTasksForSprintBoard(sprintId);
+            const taskInBoard = boardTasks.find(t => t.id === updatedTask.id);
+            log(`Task in sprint board: ${taskInBoard ? 'YES' : 'NO'}`);
+            if (taskInBoard) {
+                log(`  Board task status: ${taskInBoard.status}`);
+            }
+            
+            updateDisplays();
+        }
+
+        function testBoardDisplay() {
+            log('=== Testing Sprint Board Display ===');
+            
+            const sprints = app.sprints;
+            if (sprints.length === 0) {
+                log('ERROR: No sprints available');
+                return;
+            }
+            
+            const sprintId = sprints[0].id;
+            log(`Testing sprint board for: ${sprints[0].name}`);
+            
+            // Test different methods
+            const tasksBySprint = app.getTasksBySprint(sprintId);
+            log(`getTasksBySprint found: ${tasksBySprint.length} tasks`);
+            
+            const flatTasks = app.getFlatTasksForSprintBoard(sprintId);
+            log(`getFlatTasksForSprintBoard found: ${flatTasks.length} tasks`);
+            
+            // Check each task's status
+            flatTasks.forEach(task => {
+                log(`  Task: ${task.title}, Status: ${task.status}, Sprint: ${task.sprintId}`);
+            });
+            
+            updateDisplays();
+        }
+
+        function testDirectTaskUpdate() {
+            log('=== Testing Direct Task Update ===');
+            
+            const tasks = app.tasks;
+            const sprints = app.sprints;
+            
+            if (tasks.length === 0 || sprints.length === 0) {
+                log('ERROR: Need both tasks and sprints');
+                return;
+            }
+            
+            const task = tasks[0];
+            const sprintId = sprints[0].id;
+            
+            log(`Directly updating task "${task.title}"`);
+            log(`Before - Status: ${task.status}, Sprint: ${task.sprintId}`);
+            
+            // Update directly using updateTask method
+            app.updateTask(task.id, {
+                sprintId: sprintId,
+                status: 'todo'
+            });
+            
+            const updatedTask = app.getTask(task.id);
+            log(`After - Status: ${updatedTask.status}, Sprint: ${updatedTask.sprintId}`);
+            
+            updateDisplays();
+        }
+
+        function debugTaskAssignment() {
+            log('=== Debugging Task Assignment Flow ===');
+            
+            // Check the assignTaskToSprint method logic
+            log('assignTaskToSprint method logic:');
+            log('1. Updates object: sprintId ? sprintId : null, status: sprintId ? "todo" : "backlog"');
+            
+            const tasks = app.tasks;
+            const sprints = app.sprints;
+            
+            if (tasks.length === 0 || sprints.length === 0) {
+                log('Need tasks and sprints for debugging');
+                return;
+            }
+            
+            const task = tasks[0];
+            const sprintId = sprints[0].id;
+            
+            log(`Current task state:`);
+            log(`  ID: ${task.id}`);
+            log(`  Title: ${task.title}`);
+            log(`  Status: ${task.status}`);
+            log(`  SprintId: ${task.sprintId}`);
+            
+            log(`Expected after assignment to sprint ${sprintId}:`);
+            log(`  Status should be: "todo"`);
+            log(`  SprintId should be: "${sprintId}"`);
+        }
+
+        function debugBoardFiltering() {
+            log('=== Debugging Board Filtering ===');
+            
+            const sprints = app.sprints;
+            if (sprints.length === 0) {
+                log('No sprints available');
+                return;
+            }
+            
+            const sprintId = sprints[0].id;
+            const allTasks = app.tasks;
+            const sprintTasks = app.getTasksBySprint(sprintId);
+            const boardTasks = app.getFlatTasksForSprintBoard(sprintId);
+            
+            log(`Total tasks: ${allTasks.length}`);
+            log(`Tasks with sprintId ${sprintId}: ${sprintTasks.length}`);
+            log(`Tasks in board: ${boardTasks.length}`);
+            
+            // Check for tasks that should be in sprint but aren't
+            const missingTasks = sprintTasks.filter(task => 
+                !boardTasks.find(boardTask => boardTask.id === task.id)
+            );
+            
+            if (missingTasks.length > 0) {
+                log(`MISSING FROM BOARD (${missingTasks.length}):`);
+                missingTasks.forEach(task => {
+                    log(`  ${task.title} - Status: ${task.status}`);
+                });
+            }
+            
+            // Check board status filtering
+            const boardStatuses = app.getBoardStatuses();
+            log(`Board statuses: ${boardStatuses.map(s => s.name).join(', ')}`);
+            
+            boardTasks.forEach(task => {
+                const matchingStatus = boardStatuses.find(s => s.id === task.status);
+                log(`Task "${task.title}" has status "${task.status}" (${matchingStatus ? 'valid' : 'invalid'})`);
+            });
+        }
+
+        function debugDataConsistency() {
+            log('=== Checking Data Consistency ===');
+            
+            const tasks = app.tasks;
+            const sprints = app.sprints;
+            
+            // Check for tasks with sprintId but no status todo
+            const inconsistentTasks = tasks.filter(task => 
+                task.sprintId && task.status !== 'todo'
+            );
+            
+            if (inconsistentTasks.length > 0) {
+                log(`INCONSISTENT TASKS (${inconsistentTasks.length}):`);
+                inconsistentTasks.forEach(task => {
+                    log(`  ${task.title} - Sprint: ${task.sprintId}, Status: ${task.status}`);
+                });
             } else {
-                alert('No sprints available. Please create a sprint first.');
+                log('No inconsistent tasks found');
+            }
+            
+            // Check for tasks with status todo but no sprintId
+            const orphanedTodoTasks = tasks.filter(task => 
+                task.status === 'todo' && !task.sprintId
+            );
+            
+            if (orphanedTodoTasks.length > 0) {
+                log(`ORPHANED TODO TASKS (${orphanedTodoTasks.length}):`);
+                orphanedTodoTasks.forEach(task => {
+                    log(`  ${task.title} - Status: ${task.status}, Sprint: ${task.sprintId}`);
+                });
+            } else {
+                log('No orphaned todo tasks found');
             }
         }
-        
-        function showConsoleOutput() {
-            const consoleDiv = document.getElementById('console-output');
-            consoleDiv.innerHTML = consoleLogs.map(log => `<div>${log}</div>`).join('');
-            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+
+        function updateDisplays() {
+            updateCurrentTasks();
+            updateSprintBoard();
         }
-        
-        function clearConsole() {
-            consoleLogs = [];
-            document.getElementById('console-output').innerHTML = '';
+
+        function updateCurrentTasks() {
+            const tasksDiv = document.getElementById('current-tasks');
+            const tasks = app.tasks;
+            const sprints = app.sprints;
+            
+            let html = '';
+            tasks.forEach(task => {
+                const sprintName = task.sprintId ? sprints.find(s => s.id === task.sprintId)?.name || 'Unknown' : 'None';
+                html += `
+                    <div class="task-info">
+                        <strong>${task.title}</strong>
+                        <span class="status-badge ${task.status}">${task.status}</span>
+                        <br>
+                        <small>Sprint: ${sprintName} | Points: ${task.points} | ID: ${task.id}</small>
+                    </div>
+                `;
+            });
+            
+            tasksDiv.innerHTML = html || '<p>No tasks found</p>';
         }
-        
-        // Auto-refresh console output
-        setInterval(showConsoleOutput, 1000);
+
+        function updateSprintBoard() {
+            const boardDiv = document.getElementById('sprint-board');
+            const sprints = app.sprints;
+            
+            if (sprints.length === 0) {
+                boardDiv.innerHTML = '<p>No sprints available</p>';
+                return;
+            }
+            
+            const sprintId = sprints[0].id;
+            const tasks = app.getFlatTasksForSprintBoard(sprintId);
+            const boardStatuses = app.getBoardStatuses();
+            
+            let html = '';
+            boardStatuses.forEach(status => {
+                const statusTasks = tasks.filter(task => task.status === status.id);
+                html += `
+                    <div class="board-column">
+                        <h3>${status.name}</h3>
+                        ${statusTasks.map(task => `
+                            <div class="task-card">
+                                <div>${task.title}</div>
+                                <small>Points: ${task.points}</small>
+                            </div>
+                        `).join('')}
+                        ${statusTasks.length === 0 ? '<small>No tasks</small>' : ''}
+                    </div>
+                `;
+            });
+            
+            boardDiv.innerHTML = html;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            log('Debug Sprint Assignment initialized');
+            updateDisplays();
+        });
     </script>
 </body>
 </html>
