@@ -20,8 +20,14 @@
                 <button class="nav-btn active" data-view="backlog">
                     <i class="fas fa-list"></i> Backlog
                 </button>
+                <button class="nav-btn" data-view="sales-backlog">
+                    <i class="fas fa-handshake"></i> Sales Backlog
+                </button>
                 <button class="nav-btn" data-view="sprints">
                     <i class="fas fa-calendar-alt"></i> Sprints
+                </button>
+                <button class="nav-btn" data-view="sales-pipeline">
+                    <i class="fas fa-chart-line"></i> Sales Pipeline
                 </button>
                 <button class="nav-btn" data-view="board">
                     <i class="fas fa-columns"></i> Sprint Board
@@ -107,6 +113,65 @@
                 </div>
             </div>
 
+            <!-- Sales Backlog View -->
+            <div id="sales-backlog-view" class="view">
+                <div class="sales-backlog-header">
+                    <h2>Sales Backlog</h2>
+                    <div class="sales-backlog-actions">
+                        <button id="create-sales-folder-btn" class="btn-secondary">
+                            <i class="fas fa-folder-plus"></i> Create Folder
+                        </button>
+                        <button id="add-contact-btn" class="btn-secondary">
+                            <i class="fas fa-user-plus"></i> Add Contact
+                        </button>
+                        <button id="add-opportunity-btn" class="btn-secondary">
+                            <i class="fas fa-briefcase"></i> Add Opportunity
+                        </button>
+                    </div>
+                </div>
+                <div class="sales-backlog-layout">
+                    <!-- Sidebar for sales folders -->
+                    <div class="sales-folder-sidebar" id="sales-folder-sidebar">
+                        <div class="sidebar-header">
+                            <h3>Sales Folders</h3>
+                        </div>
+                        <div class="sales-folder-list" id="sales-folder-list">
+                            <!-- Sales folders will be dynamically added here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Main content area for sales items -->
+                    <div class="sales-main-content" id="sales-main-content">
+                        <div class="sales-header">
+                            <h3 id="current-sales-folder-title">All Sales Items</h3>
+                            <div class="sales-actions">
+                                <button id="add-contact-to-folder-btn" class="btn-primary">
+                                    <i class="fas fa-user-plus"></i> Add Contact
+                                </button>
+                                <button id="add-opportunity-to-folder-btn" class="btn-primary">
+                                    <i class="fas fa-briefcase"></i> Add Opportunity
+                                </button>
+                            </div>
+                        </div>
+                        <div class="sales-table-container" id="sales-table-container">
+                            <div class="sales-table-header">
+                                <div class="sales-col-type">Type</div>
+                                <div class="sales-col-name">Name</div>
+                                <div class="sales-col-organization">Organization</div>
+                                <div class="sales-col-email">Email</div>
+                                <div class="sales-col-phone">Phone</div>
+                                <div class="sales-col-value">Value</div>
+                                <div class="sales-col-status">Status</div>
+                                <div class="sales-col-actions">Actions</div>
+                            </div>
+                            <div class="sales-table-body" id="sales-table-body">
+                                <!-- Sales items will be dynamically added here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Sprints View -->
             <div id="sprints-view" class="view">
                 <div class="sprints-header">
@@ -117,6 +182,30 @@
                 </div>
                 <div class="sprints-container" id="sprints-container">
                     <!-- Sprint list will be dynamically added here -->
+                </div>
+            </div>
+
+            <!-- Sales Pipeline View -->
+            <div id="sales-pipeline-view" class="view">
+                <div class="sales-pipeline-header">
+                    <h2>Sales Pipeline</h2>
+                    <div class="sales-pipeline-controls">
+                        <select id="sales-pipeline-selector" class="sales-pipeline-select">
+                            <option value="">Select Pipeline</option>
+                        </select>
+                        <button id="create-sales-pipeline-btn" class="btn-primary">
+                            <i class="fas fa-plus"></i> Create Pipeline
+                        </button>
+                        <button id="add-opportunity-to-pipeline-btn" class="btn-secondary">
+                            <i class="fas fa-briefcase"></i> Add Opportunity
+                        </button>
+                        <button id="manage-sales-statuses-btn" class="btn-secondary">
+                            <i class="fas fa-cog"></i> Manage Statuses
+                        </button>
+                    </div>
+                </div>
+                <div class="sales-pipeline-container" id="sales-pipeline-container">
+                    <!-- Sales pipeline columns will be dynamically added here -->
                 </div>
             </div>
 
@@ -358,6 +447,190 @@
             </div>
         </div>
 
+        <!-- Contact Modal -->
+        <div id="contact-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="contact-modal-title">Create Contact</h3>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <form id="contact-form">
+                    <div class="form-group">
+                        <label for="contact-name">Name *</label>
+                        <input type="text" id="contact-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-organization">Organization</label>
+                        <input type="text" id="contact-organization">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-email">Email</label>
+                        <input type="email" id="contact-email">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-phone">Phone</label>
+                        <input type="tel" id="contact-phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-title">Title</label>
+                        <input type="text" id="contact-title">
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-notes">Notes</label>
+                        <textarea id="contact-notes" rows="3"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Save Contact</button>
+                        <button type="button" class="btn-secondary cancel-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Opportunity Modal -->
+        <div id="opportunity-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="opportunity-modal-title">Create Opportunity</h3>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <form id="opportunity-form">
+                    <div class="form-group">
+                        <label for="opportunity-name">Name *</label>
+                        <input type="text" id="opportunity-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="opportunity-description">Description</label>
+                        <textarea id="opportunity-description" rows="3"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="opportunity-value">Value ($)</label>
+                            <input type="number" id="opportunity-value" min="0" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label for="opportunity-currency">Currency</label>
+                            <select id="opportunity-currency">
+                                <option value="USD">USD</option>
+                                <option value="EUR">EUR</option>
+                                <option value="GBP">GBP</option>
+                                <option value="AUD">AUD</option>
+                                <option value="CAD">CAD</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="opportunity-close-date">Close Date</label>
+                            <input type="date" id="opportunity-close-date">
+                        </div>
+                        <div class="form-group">
+                            <label for="opportunity-probability">Probability (%)</label>
+                            <input type="number" id="opportunity-probability" min="0" max="100" value="50">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="opportunity-contacts">Assigned Contacts</label>
+                        <select id="opportunity-contacts" multiple size="3">
+                            <!-- Contacts will be dynamically added here -->
+                        </select>
+                        <small>Hold Ctrl/Cmd to select multiple contacts</small>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Save Opportunity</button>
+                        <button type="button" class="btn-secondary cancel-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sales Pipeline Modal -->
+        <div id="sales-pipeline-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="sales-pipeline-modal-title">Create Sales Pipeline</h3>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <form id="sales-pipeline-form">
+                    <div class="form-group">
+                        <label for="sales-pipeline-name">Pipeline Name *</label>
+                        <input type="text" id="sales-pipeline-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="sales-pipeline-description">Description</label>
+                        <textarea id="sales-pipeline-description" rows="3"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Create Pipeline</button>
+                        <button type="button" class="btn-secondary cancel-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sales Board Status Management Modal -->
+        <div id="sales-status-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="sales-status-modal-title">Manage Sales Pipeline Statuses</h3>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="status-controls">
+                        <button id="add-sales-status-btn" class="btn-primary">
+                            <i class="fas fa-plus"></i> Add Status
+                        </button>
+                        <button id="reset-sales-statuses-btn" class="btn-secondary">
+                            <i class="fas fa-undo"></i> Reset to Default
+                        </button>
+                    </div>
+                    <div id="sales-status-list" class="status-list">
+                        <!-- Status items will be dynamically added here -->
+                    </div>
+                    <div id="add-sales-status-form" class="add-status-form">
+                        <input type="text" id="new-sales-status-name" placeholder="Enter status name">
+                        <input type="number" id="new-sales-status-order" placeholder="Order" min="1" value="">
+                        <div class="add-status-actions">
+                            <button type="button" class="add-status-save-btn" onclick="app.addSalesStatus()">
+                                <i class="fas fa-check"></i> Add
+                            </button>
+                            <button type="button" class="add-status-cancel-btn" onclick="app.hideAddSalesStatusForm()">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assign Contact Modal -->
+        <div id="assign-contact-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Assign Contact to Opportunity</h3>
+                    <button class="close-btn">&times;</button>
+                </div>
+                <form id="assign-contact-form">
+                    <div class="form-group">
+                        <label for="opportunity-select">Select Opportunity:</label>
+                        <select id="opportunity-select" required>
+                            <option value="">Choose an opportunity...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-select">Select Contact:</label>
+                        <select id="contact-select" required>
+                            <option value="">Choose a contact...</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Assign Contact</button>
+                        <button type="button" class="btn-secondary cancel-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
     <script src="app.js?v=20250814-8"></script>
 
 
@@ -413,3 +686,31 @@
     </div>
 </body>
 </html>
+    <!-- Sales Pipeline Status Modal -->
+    <div id="sales-pipeline-status-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Sales Pipeline Status Management</h2>
+                <span class="close" onclick="app.closeSalesPipelineStatusModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="sales-pipeline-status-list">
+                    <!-- Status items will be dynamically added here -->
+                </div>
+                <div class="sales-pipeline-status-form">
+                    <h3>Add New Status</h3>
+                    <form id="sales-pipeline-status-form">
+                        <div class="form-group">
+                            <label for="new-sales-pipeline-status-name">Status Name:</label>
+                            <input type="text" id="new-sales-pipeline-status-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-sales-pipeline-status-color">Color:</label>
+                            <input type="color" id="new-sales-pipeline-status-color" value="#6c757d">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Add Status</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>

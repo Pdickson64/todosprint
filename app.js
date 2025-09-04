@@ -3983,6 +3983,1371 @@ function SprintTodoApp() {
         }
     };
 
+    // Sales Pipeline Methods
+    SprintTodoApp.prototype.switchView = function(viewName) {
+        console.log('switchView called with:', viewName);
+        this.currentView = viewName;
+        
+        // Hide all views
+        document.querySelectorAll('.view').forEach(view => {
+            view.classList.remove('active');
+        });
+        
+        // Show the requested view
+        const targetView = document.getElementById(`${viewName}-view`);
+        if (targetView) {
+            targetView.classList.add('active');
+            console.log(`Activated ${viewName} view`);
+        } else {
+            console.error(`View not found: ${viewName}-view`);
+        }
+        
+        // Update navigation
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        const activeNavBtn = document.querySelector(`[data-view="${viewName}"]`);
+        if (activeNavBtn) {
+            activeNavBtn.classList.add('active');
+        }
+        
+        // Render the specific view
+        switch(viewName) {
+            case 'backlog':
+                this.renderBacklog();
+                break;
+            case 'sprints':
+                this.renderSprints();
+                break;
+            case 'board':
+                this.renderSprintBoard();
+                break;
+            case 'analysis':
+                this.renderAnalysis();
+                break;
+            case 'sales-backlog':
+                this.renderSalesBacklog();
+                break;
+            case 'sales-pipeline':
+                this.renderSalesPipeline();
+                break;
+        }
+    };
+
+    SprintTodoApp.prototype.renderSalesBacklog = function() {
+        console.log('renderSalesBacklog called');
+        
+        // Clear existing content
+        const salesBacklogView = document.getElementById('sales-backlog-view');
+        if (!salesBacklogView) {
+            console.error('Sales backlog view not found');
+            return;
+        }
+        
+        // Create sales backlog layout
+        salesBacklogView.innerHTML = `
+            <div class="sales-backlog-layout">
+                <div class="sales-folder-sidebar">
+                    <div class="sidebar-header">
+                        <h3>Sales Backlog</h3>
+                    </div>
+                    <div class="sales-folder-list">
+                        <div class="sales-folder-item active" data-folder="contacts">
+                            <i class="fas fa-users"></i>
+                            <span class="folder-name">Contacts</span>
+                            <span class="folder-count">${this.getSalesContacts().length}</span>
+                        </div>
+                        <div class="sales-folder-item" data-folder="opportunities">
+                            <i class="fas fa-briefcase"></i>
+                            <span class="folder-name">Opportunities</span>
+                            <span class="folder-count">${this.getSalesOpportunities().length}</span>
+                        </div>
+                    </div>
+                    <div class="sales-actions" style="margin-top: 20px;">
+                        <button class="btn-primary" onclick="app.showCreateSalesContactDialog()">
+                            <i class="fas fa-user-plus"></i> Add Contact
+                        </button>
+                        <button class="btn-primary" onclick="app.showCreateSalesOpportunityDialog()">
+                            <i class="fas fa-plus"></i> Add Opportunity
+                        </button>
+                    </div>
+                </div>
+                <div class="sales-main-content">
+                    <div class="sales-header">
+                        <h3 id="sales-current-folder">Contacts</h3>
+                        <div class="sales-actions">
+                            <button class="btn-secondary" onclick="app.exportSalesData()">
+                                <i class="fas fa-download"></i> Export
+                            </button>
+                        </div>
+                    </div>
+                    <div class="sales-table-container">
+                        <div class="sales-table-header">
+                            <div>Name</div>
+                            <div>Organization</div>
+                            <div>Email</div>
+                            <div>Phone</div>
+                            <div>Value</div>
+                            <div>Status</div>
+                            <div>Actions</div>
+                        </div>
+                        <div class="sales-table-body" id="sales-items-container">
+                            ${this.renderSalesItems('contacts')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Add event listeners for folder selection
+        salesBacklogView.querySelectorAll('.sales-folder-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                const folder = e.currentTarget.dataset.folder;
+                this.selectSalesFolder(folder);
+            });
+        });
+    };
+
+    SprintTodoApp.prototype.selectSalesFolder = function(folderName) {
+        console.log('selectSalesFolder called with:', folderName);
+        
+        // Update active folder
+        document.querySelectorAll('.sales-folder-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        
+        const activeFolder = document.querySelector(`[data-folder="${folderName}"]`);
+        if (activeFolder) {
+            activeFolder.classList.add('active');
+        }
+        
+        // Update header
+        const header = document.getElementById('sales-current-folder');
+        if (header) {
+            header.textContent = folderName.charAt(0).toUpperCase() + folderName.slice(1);
+        }
+        
+        // Render items
+        const container = document.getElementById('sales-items-container');
+        if (container) {
+            container.innerHTML = this.renderSalesItems(folderName);
+        }
+    };
+
+    SprintTodoApp.prototype.renderSalesItems = function(folderName) {
+        console.log('renderSalesItems called with:', folderName);
+        
+        let items = [];
+        if (folderName === 'contacts') {
+            items = this.getSalesContacts();
+        } else if (folderName === 'opportunities') {
+            items = this.getSalesOpportunities();
+        }
+        
+        if (items.length === 0) {
+            return `
+                <div class="empty-task-state">
+                    <i class="fas fa-inbox"></i>
+                    <p>No ${folderName} found</p>
+                </div>
+            `;
+        }
+        
+        return items.map(item => {
+            if (folderName === 'contacts') {
+                return this.renderSalesContactItem(item);
+            } else {
+                return this.renderSalesOpportunityItem(item);
+            }
+        }).join('');
+    };
+
+    SprintTodoApp.prototype.renderSalesContactItem = function(contact) {
+        return `
+            <div class="sales-item" data-contact-id="${contact.id}">
+                <div class="sales-col-name">${contact.name}</div>
+                <div class="sales-col-organization">${contact.organization || '-'}</div>
+                <div class="sales-col-email">${contact.email || '-'}</div>
+                <div class="sales-col-phone">${contact.phone || '-'}</div>
+                <div class="sales-col-value">-</div>
+                <div class="sales-col-status">
+                    <span class="badge bg-secondary">Active</span>
+                </div>
+                <div class="sales-col-actions">
+                    <button class="sales-btn sales-btn-edit" onclick="app.editSalesContact('${contact.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="sales-btn sales-btn-delete" onclick="app.deleteSalesContact('${contact.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <button class="sales-btn sales-btn-assign" onclick="app.assignContactToOpportunity('${contact.id}')">
+                        <i class="fas fa-link"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    };
+
+    SprintTodoApp.prototype.renderSalesOpportunityItem = function(opportunity) {
+        const assignedContacts = opportunity.assignedContacts || [];
+        const contactTags = assignedContacts.map(contactId => {
+            const contact = this.getSalesContact(contactId);
+            return contact ? `<span class="sales-contact-tag">${contact.name}</span>` : '';
+        }).join('');
+        
+        return `
+            <div class="sales-item" data-opportunity-id="${opportunity.id}">
+                <div class="sales-col-name">${opportunity.title}</div>
+                <div class="sales-col-organization">${opportunity.organization || '-'}</div>
+                <div class="sales-col-email">${opportunity.email || '-'}</div>
+                <div class="sales-col-phone">${opportunity.phone || '-'}</div>
+                <div class="sales-col-value">$${opportunity.value || 0}</div>
+                <div class="sales-col-status">
+                    <span class="badge bg-primary">${opportunity.status || 'New'}</span>
+                </div>
+                <div class="sales-col-actions">
+                    <button class="sales-btn sales-btn-edit" onclick="app.editSalesOpportunity('${opportunity.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="sales-btn sales-btn-delete" onclick="app.deleteSalesOpportunity('${opportunity.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                    <button class="sales-btn sales-btn-assign" onclick="app.assignOpportunityToPipeline('${opportunity.id}')">
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    };
+
+    SprintTodoApp.prototype.getSalesContacts = function() {
+        return this.tasks.filter(task => task.type === 'contact');
+    };
+
+    SprintTodoApp.prototype.getSalesOpportunities = function() {
+        return this.tasks.filter(task => task.type === 'opportunity');
+    };
+
+    SprintTodoApp.prototype.getSalesContact = function(contactId) {
+        return this.getSalesContacts().find(contact => contact.id === contactId);
+    };
+
+    SprintTodoApp.prototype.createSalesContact = function(contactData) {
+        const contact = {
+            id: Date.now().toString(),
+            type: 'contact',
+            name: contactData.name,
+            organization: contactData.organization || '',
+            email: contactData.email || '',
+            phone: contactData.phone || '',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        
+        this.tasks.push(contact);
+        this.saveData();
+        this.renderSalesBacklog();
+        this.showNotification('Contact created successfully!');
+        return contact;
+    };
+
+    SprintTodoApp.prototype.createSalesOpportunity = function(opportunityData) {
+        const opportunity = {
+            id: Date.now().toString(),
+            type: 'opportunity',
+            title: opportunityData.title,
+            description: opportunityData.description || '',
+            value: opportunityData.value || 0,
+            organization: opportunityData.organization || '',
+            email: opportunityData.email || '',
+            phone: opportunityData.phone || '',
+            status: 'new',
+            assignedContacts: opportunityData.assignedContacts || [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        
+        this.tasks.push(opportunity);
+        this.saveData();
+        this.renderSalesBacklog();
+        this.showNotification('Opportunity created successfully!');
+        return opportunity;
+    };
+
+    SprintTodoApp.prototype.editSalesContact = function(contactId) {
+        const contact = this.getSalesContact(contactId);
+        if (!contact) return;
+        
+        const modal = document.getElementById('contact-modal');
+        const form = document.getElementById('contact-form');
+        
+        // Populate form with existing data
+        document.getElementById('contact-name').value = contact.name;
+        document.getElementById('contact-organization').value = contact.organization;
+        document.getElementById('contact-email').value = contact.email;
+        document.getElementById('contact-phone').value = contact.phone;
+        document.getElementById('contact-title').value = contact.title || '';
+        document.getElementById('contact-notes').value = contact.notes || '';
+        
+        // Set modal title
+        document.getElementById('contact-modal-title').textContent = 'Edit Contact';
+        
+        // Store contact ID for update
+        form.dataset.contactId = contactId;
+        
+        // Show modal
+        modal.classList.add('active');
+        
+        // Handle form submission
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            
+            const contactData = {
+                name: document.getElementById('contact-name').value,
+                organization: document.getElementById('contact-organization').value,
+                email: document.getElementById('contact-email').value,
+                phone: document.getElementById('contact-phone').value,
+                title: document.getElementById('contact-title').value,
+                notes: document.getElementById('contact-notes').value,
+                updatedAt: new Date().toISOString()
+            };
+            
+            this.updateTask(contactId, contactData);
+            this.closeContactModal();
+            this.renderSalesBacklog();
+            this.showNotification('Contact updated successfully!');
+        };
+    };
+
+    SprintTodoApp.prototype.editSalesOpportunity = function(opportunityId) {
+        const opportunity = this.getSalesOpportunities().find(o => o.id === opportunityId);
+        if (!opportunity) return;
+        
+        const modal = document.getElementById('opportunity-modal');
+        const form = document.getElementById('opportunity-form');
+        
+        // Populate form with existing data
+        document.getElementById('opportunity-name').value = opportunity.title;
+        document.getElementById('opportunity-description').value = opportunity.description;
+        document.getElementById('opportunity-value').value = opportunity.value;
+        document.getElementById('opportunity-currency').value = opportunity.currency || 'USD';
+        document.getElementById('opportunity-close-date').value = opportunity.closeDate || '';
+        document.getElementById('opportunity-probability').value = opportunity.probability || 50;
+        
+        // Populate contacts dropdown and select assigned contacts
+        this.populateOpportunityContacts();
+        const contactsSelect = document.getElementById('opportunity-contacts');
+        if (opportunity.assignedContacts && opportunity.assignedContacts.length > 0) {
+            Array.from(contactsSelect.options).forEach(option => {
+                option.selected = opportunity.assignedContacts.includes(option.value);
+            });
+        }
+        
+        // Set modal title
+        document.getElementById('opportunity-modal-title').textContent = 'Edit Opportunity';
+        
+        // Store opportunity ID for update
+        form.dataset.opportunityId = opportunityId;
+        
+        // Show modal
+        modal.classList.add('active');
+        
+        // Handle form submission
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            
+            const selectedContacts = Array.from(document.getElementById('opportunity-contacts').selectedOptions)
+                .map(option => option.value);
+            
+            const opportunityData = {
+                title: document.getElementById('opportunity-name').value,
+                description: document.getElementById('opportunity-description').value,
+                value: parseFloat(document.getElementById('opportunity-value').value) || 0,
+                currency: document.getElementById('opportunity-currency').value,
+                closeDate: document.getElementById('opportunity-close-date').value,
+                probability: parseInt(document.getElementById('opportunity-probability').value) || 50,
+                assignedContacts: selectedContacts,
+                updatedAt: new Date().toISOString()
+            };
+            
+            this.updateTask(opportunityId, opportunityData);
+            this.closeOpportunityModal();
+            this.renderSalesBacklog();
+            this.showNotification('Opportunity updated successfully!');
+        };
+    };
+
+    SprintTodoApp.prototype.deleteSalesContact = function(contactId) {
+        if (confirm('Are you sure you want to delete this contact?')) {
+            this.tasks = this.tasks.filter(task => task.id !== contactId);
+            this.saveData();
+            this.renderSalesBacklog();
+            this.showNotification('Contact deleted successfully!');
+        }
+    };
+
+    SprintTodoApp.prototype.deleteSalesOpportunity = function(opportunityId) {
+        if (confirm('Are you sure you want to delete this opportunity?')) {
+            this.tasks = this.tasks.filter(task => task.id !== opportunityId);
+            this.saveData();
+            this.renderSalesBacklog();
+            this.showNotification('Opportunity deleted successfully!');
+        }
+    };
+
+    SprintTodoApp.prototype.assignContactToOpportunity = function(contactId) {
+        const opportunities = this.getSalesOpportunities();
+        if (opportunities.length === 0) {
+            this.showNotification('No opportunities available to assign contact to.', 'warning');
+            return;
+        }
+        
+        const modal = document.getElementById('assign-contact-modal');
+        const form = document.getElementById('assign-contact-form');
+        
+        // Populate opportunities dropdown
+        const opportunitiesSelect = document.getElementById('assign-contact-opportunity');
+        opportunitiesSelect.innerHTML = '';
+        
+        opportunities.forEach(opportunity => {
+            const option = document.createElement('option');
+            option.value = opportunity.id;
+            option.textContent = opportunity.title;
+            opportunitiesSelect.appendChild(option);
+        });
+        
+        // Set modal title
+        document.getElementById('assign-contact-modal-title').textContent = 'Assign Contact to Opportunity';
+        
+        // Store contact ID for assignment
+        form.dataset.contactId = contactId;
+        
+        // Show modal
+        modal.classList.add('active');
+        
+        // Handle form submission
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            
+            const opportunityId = document.getElementById('assign-contact-opportunity').value;
+            const opportunity = opportunities.find(opp => opp.id === opportunityId);
+            
+            if (opportunity) {
+                // Add contact to opportunity's assigned contacts
+                if (!opportunity.assignedContacts) {
+                    opportunity.assignedContacts = [];
+                }
+                
+                // Check if contact is already assigned
+                if (!opportunity.assignedContacts.includes(contactId)) {
+                    opportunity.assignedContacts.push(contactId);
+                    
+                    // Update the opportunity
+                    this.updateTask(opportunityId, {
+                        assignedContacts: opportunity.assignedContacts,
+                        updatedAt: new Date().toISOString()
+                    });
+                    
+                    this.closeAssignContactModal();
+                    this.renderSalesBacklog();
+                    this.showNotification('Contact assigned to opportunity successfully!');
+                } else {
+                    this.showNotification('Contact is already assigned to this opportunity.', 'warning');
+                }
+            }
+        };
+    };
+
+    SprintTodoApp.prototype.closeAssignContactModal = function() {
+        const modal = document.getElementById('assign-contact-modal');
+        modal.classList.remove('active');
+    };
+
+    SprintTodoApp.prototype.assignOpportunityToPipeline = function(opportunityId) {
+        const opportunity = this.getSalesOpportunities().find(opp => opp.id === opportunityId);
+        if (!opportunity) {
+            this.showNotification('Opportunity not found.', 'error');
+            return;
+        }
+        
+        // Switch to sales pipeline view
+        this.switchView('sales-pipeline');
+        
+        // Store the opportunity ID for assignment
+        this.pendingOpportunityAssignment = opportunityId;
+        
+        // Set default status for the opportunity
+        const defaultStatus = this.getSalesPipelineStatuses()[0];
+        if (defaultStatus) {
+            this.updateTask(opportunityId, {
+                status: defaultStatus.id,
+                updatedAt: new Date().toISOString()
+            });
+            
+            // Re-render the pipeline to show the newly assigned opportunity
+            setTimeout(() => {
+                this.renderSalesPipeline();
+                
+                // Add visual feedback - highlight the newly assigned opportunity
+                const opportunityCard = document.querySelector(`[data-opportunity-id="${opportunityId}"]`);
+                if (opportunityCard) {
+                    opportunityCard.classList.add('newly-assigned');
+                    opportunityCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    // Remove the highlight after 3 seconds
+                    setTimeout(() => {
+                        opportunityCard.classList.remove('newly-assigned');
+                    }, 3000);
+                }
+                
+                this.showNotification(`Opportunity "${opportunity.title}" assigned to pipeline successfully!`);
+            }, 100);
+        } else {
+            this.showNotification('No pipeline statuses available. Please configure statuses first.', 'warning');
+        }
+    };
+
+    // Sales Pipeline Status Management Methods
+    SprintTodoApp.prototype.showSalesPipelineStatusModal = function() {
+        const modal = document.getElementById('sales-status-modal');
+        if (modal) {
+            modal.style.display = 'block';
+            this.renderSalesPipelineStatuses();
+        }
+    };
+
+    SprintTodoApp.prototype.closeSalesPipelineStatusModal = function() {
+        const modal = document.getElementById('sales-status-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    };
+
+    SprintTodoApp.prototype.renderSalesPipelineStatuses = function() {
+        const statusList = document.getElementById('sales-status-list');
+        if (!statusList) return;
+
+        const statuses = this.getSalesPipelineStatuses();
+        statusList.innerHTML = '';
+
+        statuses.forEach((status, index) => {
+            const statusItem = document.createElement('div');
+            statusItem.className = 'status-item';
+            statusItem.innerHTML = `
+                <div class="status-info">
+                    <span class="status-color" style="background-color: ${status.color}"></span>
+                    <span class="status-name">${status.name}</span>
+                </div>
+                <div class="status-actions">
+                    <button class="btn-icon" onclick="app.editSalesPipelineStatus(${index})" title="Edit Status">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn-icon" onclick="app.deleteSalesPipelineStatus(${index})" title="Delete Status">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            statusList.appendChild(statusItem);
+        });
+    };
+
+    SprintTodoApp.prototype.addSalesStatus = function() {
+        const nameInput = document.getElementById('new-sales-status-name');
+        const orderInput = document.getElementById('new-sales-status-order');
+        
+        if (!nameInput.value.trim()) {
+            this.showNotification('Please enter a status name.', 'error');
+            return;
+        }
+
+        const newStatus = {
+            id: 'status_' + Date.now(),
+            name: nameInput.value.trim(),
+            order: parseInt(orderInput.value) || (this.getSalesPipelineStatuses().length + 1),
+            color: this.getRandomColor()
+        };
+
+        this.salesPipelineStatuses.push(newStatus);
+        this.saveData();
+        this.renderSalesPipelineStatuses();
+        this.renderSalesPipeline();
+        
+        // Reset form
+        nameInput.value = '';
+        orderInput.value = '';
+        
+        this.showNotification('Status added successfully!', 'success');
+    };
+
+    SprintTodoApp.prototype.editSalesPipelineStatus = function(index) {
+        const statuses = this.getSalesPipelineStatuses();
+        if (index < 0 || index >= statuses.length) return;
+
+        const status = statuses[index];
+        const newName = prompt('Enter new status name:', status.name);
+        
+        if (newName && newName.trim()) {
+            status.name = newName.trim();
+            this.saveData();
+            this.renderSalesPipelineStatuses();
+            this.renderSalesPipeline();
+            this.showNotification('Status updated successfully!', 'success');
+        }
+    };
+
+    SprintTodoApp.prototype.deleteSalesPipelineStatus = function(index) {
+        const statuses = this.getSalesPipelineStatuses();
+        if (index < 0 || index >= statuses.length) return;
+
+        if (confirm('Are you sure you want to delete this status?')) {
+            const deletedStatus = statuses[index];
+            this.salesPipelineStatuses.splice(index, 1);
+            
+            // Update any tasks using this status
+            this.getSalesOpportunities().forEach(opportunity => {
+                if (opportunity.status === deletedStatus.id) {
+                    opportunity.status = '';
+                }
+            });
+            
+            this.saveData();
+            this.renderSalesPipelineStatuses();
+            this.renderSalesPipeline();
+            this.showNotification('Status deleted successfully!', 'success');
+        }
+    };
+
+    SprintTodoApp.prototype.resetSalesPipelineStatuses = function() {
+        if (confirm('Are you sure you want to reset all statuses to default?')) {
+            this.salesPipelineStatuses = [
+                { id: 'lead', name: 'Lead', order: 1, color: '#6c757d' },
+                { id: 'qualified', name: 'Qualified', order: 2, color: '#007bff' },
+                { id: 'proposal', name: 'Proposal', order: 3, color: '#28a745' },
+                { id: 'negotiation', name: 'Negotiation', order: 4, color: '#ffc107' },
+                { id: 'closed_won', name: 'Closed Won', order: 5, color: '#17a2b8' },
+                { id: 'closed_lost', name: 'Closed Lost', order: 6, color: '#dc3545' }
+            ];
+            this.saveData();
+            this.renderSalesPipelineStatuses();
+            this.renderSalesPipeline();
+            this.showNotification('Statuses reset to default!', 'success');
+        }
+    };
+
+    // Assign Contact to Opportunity Methods
+    SprintTodoApp.prototype.showAssignContactDialog = function(opportunityId) {
+        const modal = document.getElementById('assign-contact-modal');
+        if (!modal) return;
+
+        this.pendingOpportunityAssignment = opportunityId;
+        
+        // Populate opportunity dropdown
+        const opportunitySelect = document.getElementById('opportunity-select');
+        opportunitySelect.innerHTML = '<option value="">Choose an opportunity...</option>';
+        
+        this.getSalesOpportunities().forEach(opp => {
+            const option = document.createElement('option');
+            option.value = opp.id;
+            option.textContent = opp.title;
+            opportunitySelect.appendChild(option);
+        });
+
+        // Populate contact dropdown
+        const contactSelect = document.getElementById('contact-select');
+        contactSelect.innerHTML = '<option value="">Choose a contact...</option>';
+        
+        this.getSalesContacts().forEach(contact => {
+            const option = document.createElement('option');
+            option.value = contact.id;
+            option.textContent = contact.name;
+            contactSelect.appendChild(option);
+        });
+
+        modal.style.display = 'block';
+    };
+
+    SprintTodoApp.prototype.closeAssignContactModal = function() {
+        const modal = document.getElementById('assign-contact-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    };
+
+    SprintTodoApp.prototype.assignContactToOpportunity = function(event) {
+        event.preventDefault();
+        
+        const opportunityId = document.getElementById('opportunity-select').value;
+        const contactId = document.getElementById('contact-select').value;
+        
+        if (!opportunityId || !contactId) {
+            this.showNotification('Please select both an opportunity and a contact.', 'error');
+            return;
+        }
+
+        const opportunity = this.getSalesOpportunities().find(opp => opp.id === opportunityId);
+        if (opportunity) {
+            if (!opportunity.contacts) {
+                opportunity.contacts = [];
+            }
+            
+            // Check if contact is already assigned
+            if (opportunity.contacts.includes(contactId)) {
+                this.showNotification('Contact is already assigned to this opportunity.', 'warning');
+                return;
+            }
+            
+            opportunity.contacts.push(contactId);
+            this.saveData();
+            this.renderSalesBacklog();
+            this.renderSalesPipeline();
+            this.closeAssignContactModal();
+            this.showNotification('Contact assigned successfully!', 'success');
+        }
+    };
+
+    SprintTodoApp.prototype.renderSalesPipeline = function() {
+        console.log('renderSalesPipeline called');
+        
+        // Clear existing content
+        const salesPipelineView = document.getElementById('sales-pipeline-view');
+        if (!salesPipelineView) {
+            console.error('Sales pipeline view not found');
+            return;
+        }
+        
+        // Get sales pipeline statuses
+        const statuses = this.getSalesPipelineStatuses();
+        
+        // Create sales pipeline layout
+        salesPipelineView.innerHTML = `
+            <div class="sales-pipeline-header">
+                <div class="sales-pipeline-controls">
+                    <select class="sales-pipeline-select" id="sales-pipeline-selector">
+                        <option value="">Select Pipeline</option>
+                        <option value="default">Default Pipeline</option>
+                    </select>
+                    <button class="btn-primary" onclick="app.showCreateSalesPipelineDialog()">
+                        <i class="fas fa-plus"></i> New Pipeline
+                    </button>
+                    <button class="btn-secondary" onclick="app.editSalesPipelineStatuses()">
+                        <i class="fas fa-cog"></i> Edit Statuses
+                    </button>
+                </div>
+            </div>
+            <div class="sales-pipeline-container">
+                ${statuses.map(status => this.renderSalesPipelineColumn(status)).join('')}
+            </div>
+        `;
+        
+        // Add drag and drop for sales pipeline
+        this.setupSalesPipelineDragAndDrop();
+    };
+
+    SprintTodoApp.prototype.renderSalesPipelineColumn = function(status) {
+        const opportunities = this.getSalesOpportunities().filter(opp => opp.status === status.id);
+        
+        return `
+            <div class="sales-pipeline-column" data-status-id="${status.id}">
+                <div class="sales-column-header">
+                    <div class="sales-column-title">
+                        <i class="fas fa-circle" style="color: ${status.color}"></i>
+                        <span>${status.name}</span>
+                    </div>
+                    <div class="sales-column-count">${opportunities.length}</div>
+                </div>
+                <div class="sales-column-content">
+                    ${opportunities.map(opp => this.renderSalesPipelineOpportunityCard(opp)).join('')}
+                    ${opportunities.length === 0 ? '<div class="empty-state">No opportunities</div>' : ''}
+                </div>
+            </div>
+        `;
+    };
+
+    SprintTodoApp.prototype.renderSalesPipelineOpportunityCard = function(opportunity) {
+        const assignedContacts = opportunity.assignedContacts || [];
+        const contactTags = assignedContacts.map(contactId => {
+            const contact = this.getSalesContact(contactId);
+            return contact ? `<span class="sales-contact-tag">${contact.name}</span>` : '';
+        }).join('');
+        
+        return `
+            <div class="sales-opportunity-card" data-opportunity-id="${opportunity.id}" draggable="true">
+                <div class="sales-opportunity-title">${opportunity.title}</div>
+                <div class="sales-opportunity-meta">
+                    <span>$${opportunity.value || 0}</span>
+                    <span>${opportunity.createdAt ? new Date(opportunity.createdAt).toLocaleDateString() : ''}</span>
+                </div>
+                ${contactTags ? `<div class="sales-opportunity-contacts">${contactTags}</div>` : ''}
+                <div class="sales-opportunity-footer">
+                    <span>${opportunity.description ? opportunity.description.substring(0, 50) + '...' : ''}</span>
+                    <div class="sales-opportunity-actions">
+                        <button class="sales-mini-btn" onclick="app.editSalesOpportunity('${opportunity.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="sales-mini-btn" onclick="app.deleteSalesOpportunity('${opportunity.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+
+    SprintTodoApp.prototype.getSalesPipelineStatuses = function() {
+        // Default sales pipeline statuses
+        const defaultStatuses = [
+            { id: 'lead', name: 'Lead', color: '#6c757d' },
+            { id: 'qualified', name: 'Qualified', color: '#007bff' },
+            { id: 'proposal', name: 'Proposal', color: '#ffc107' },
+            { id: 'negotiation', name: 'Negotiation', color: '#fd7e14' },
+            { id: 'closed-won', name: 'Closed Won', color: '#28a745' },
+            { id: 'closed-lost', name: 'Closed Lost', color: '#dc3545' }
+        ];
+        
+        // Check if custom statuses exist in localStorage
+        const savedStatuses = localStorage.getItem('sales-pipeline-statuses');
+        return savedStatuses ? JSON.parse(savedStatuses) : defaultStatuses;
+    };
+
+    SprintTodoApp.prototype.saveSalesPipelineStatuses = function(statuses) {
+        localStorage.setItem('sales-pipeline-statuses', JSON.stringify(statuses));
+        this.renderSalesPipeline();
+        this.showNotification('Sales pipeline statuses updated successfully!');
+    };
+
+    SprintTodoApp.prototype.addSalesPipelineStatus = function(statusData) {
+        const statuses = this.getSalesPipelineStatuses();
+        const status = {
+            id: statusData.id || Date.now().toString(),
+            name: statusData.name,
+            color: statusData.color || '#6c757d'
+        };
+        
+        statuses.push(status);
+        this.saveSalesPipelineStatuses(statuses);
+        return status;
+    };
+
+    SprintTodoApp.prototype.updateSalesPipelineStatus = function(statusId, updates) {
+        const statuses = this.getSalesPipelineStatuses();
+        const statusIndex = statuses.findIndex(s => s.id === statusId);
+        
+        if (statusIndex !== -1) {
+            statuses[statusIndex] = {
+                ...statuses[statusIndex],
+                ...updates
+            };
+            this.saveSalesPipelineStatuses(statuses);
+            return statuses[statusIndex];
+        }
+        return null;
+    };
+
+    SprintTodoApp.prototype.deleteSalesPipelineStatus = function(statusId) {
+        const statuses = this.getSalesPipelineStatuses();
+        
+        // Check if any opportunities are using this status
+        const opportunitiesWithStatus = this.getSalesOpportunities().filter(opp => opp.status === statusId);
+        if (opportunitiesWithStatus.length > 0) {
+            this.showNotification(`Cannot delete status: ${opportunitiesWithStatus.length} opportunities are using it.`, 'warning');
+            return false;
+        }
+        
+        const filteredStatuses = statuses.filter(s => s.id !== statusId);
+        this.saveSalesPipelineStatuses(filteredStatuses);
+        return true;
+    };
+
+    SprintTodoApp.prototype.resetSalesPipelineStatuses = function() {
+        localStorage.removeItem('sales-pipeline-statuses');
+        this.renderSalesPipeline();
+        this.showNotification('Sales pipeline statuses reset to default');
+    };
+
+    // Edit Sales Pipeline Status
+    SprintTodoApp.prototype.editSalesPipelineStatus = function(statusId) {
+        const statuses = this.getSalesPipelineStatuses();
+        const status = statuses.find(s => s.id === statusId);
+        
+        if (!status) {
+            this.showNotification('Status not found.', 'error');
+            return;
+        }
+        
+        const modal = document.getElementById('sales-pipeline-status-modal');
+        const statusList = modal.querySelector('.sales-pipeline-status-list');
+        const statusForm = modal.querySelector('.sales-pipeline-status-form');
+        
+        // Hide the status list and show edit form
+        statusList.style.display = 'none';
+        statusForm.style.display = 'none';
+        
+        // Create edit form
+        const editForm = document.createElement('div');
+        editForm.className = 'sales-pipeline-status-edit-form';
+        editForm.innerHTML = `
+            <h3>Edit Status</h3>
+            <form id="sales-pipeline-status-edit-form">
+                <div class="form-group">
+                    <label for="edit-sales-pipeline-status-name">Status Name:</label>
+                    <input type="text" id="edit-sales-pipeline-status-name" value="${status.name}" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit-sales-pipeline-status-color">Color:</label>
+                    <input type="color" id="edit-sales-pipeline-status-color" value="${status.color}">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="save-btn">Save Changes</button>
+                    <button type="button" class="cancel-btn" onclick="app.cancelEditSalesPipelineStatus()">Cancel</button>
+                </div>
+            </form>
+        `;
+        
+        modal.querySelector('.modal-body').appendChild(editForm);
+        
+        // Handle form submission
+        const editFormElement = document.getElementById('sales-pipeline-status-edit-form');
+        editFormElement.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('edit-sales-pipeline-status-name').value.trim();
+            const color = document.getElementById('edit-sales-pipeline-status-color').value;
+            
+            if (name) {
+                this.updateSalesPipelineStatus(statusId, { name, color });
+                this.closeSalesPipelineStatusModal();
+            }
+        });
+    };
+
+    // Cancel Edit Sales Pipeline Status
+    SprintTodoApp.prototype.cancelEditSalesPipelineStatus = function() {
+        const modal = document.getElementById('sales-pipeline-status-modal');
+        const editForm = modal.querySelector('.sales-pipeline-status-edit-form');
+        const statusList = modal.querySelector('.sales-pipeline-status-list');
+        const statusForm = modal.querySelector('.sales-pipeline-status-form');
+        
+        if (editForm) {
+            editForm.remove();
+        }
+        
+        statusList.style.display = 'block';
+        statusForm.style.display = 'block';
+    };
+
+    // Update Sales Pipeline Status
+    SprintTodoApp.prototype.updateSalesPipelineStatus = function(statusId, updates) {
+        const statuses = this.getSalesPipelineStatuses();
+        const statusIndex = statuses.findIndex(s => s.id === statusId);
+        
+        if (statusIndex !== -1) {
+            statuses[statusIndex] = { ...statuses[statusIndex], ...updates };
+            this.saveSalesPipelineStatuses(statuses);
+            this.renderSalesPipelineStatuses();
+            this.renderSalesPipeline();
+            this.showNotification('Status updated successfully!');
+        }
+    };
+
+    // Delete Sales Pipeline Status
+    SprintTodoApp.prototype.deleteSalesPipelineStatus = function(statusId) {
+        const statuses = this.getSalesPipelineStatuses();
+        const statusIndex = statuses.findIndex(s => s.id === statusId);
+        
+        if (statusIndex !== -1) {
+            const statusName = statuses[statusIndex].name;
+            statuses.splice(statusIndex, 1);
+            this.saveSalesPipelineStatuses(statuses);
+            this.renderSalesPipelineStatuses();
+            this.renderSalesPipeline();
+            this.showNotification(`Status "${statusName}" deleted successfully!`);
+        }
+    };
+
+    // Render Sales Pipeline Statuses
+    SprintTodoApp.prototype.renderSalesPipelineStatuses = function() {
+        const modal = document.getElementById('sales-pipeline-status-modal');
+        const statusList = modal.querySelector('.sales-pipeline-status-list');
+        const statusForm = modal.querySelector('.sales-pipeline-status-form');
+        
+        // Clear existing content
+        statusList.innerHTML = '';
+        
+        const statuses = this.getSalesPipelineStatuses();
+        
+        if (statuses.length === 0) {
+            statusList.innerHTML = '<p>No statuses available. Add a new status to get started.</p>';
+        } else {
+            statuses.forEach(status => {
+                const statusItem = document.createElement('div');
+                statusItem.className = 'sales-pipeline-status-item';
+                statusItem.style.borderLeftColor = status.color;
+                statusItem.innerHTML = `
+                    <div class="status-info">
+                        <div class="status-name">${status.name}</div>
+                    </div>
+                    <div class="status-actions">
+                        <button class="edit-status-btn" onclick="app.editSalesPipelineStatus('${status.id}')">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="delete-status-btn" onclick="app.deleteSalesPipelineStatus('${status.id}')">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                `;
+                statusList.appendChild(statusItem);
+            });
+        }
+        
+        // Show status list and form
+        statusList.style.display = 'block';
+        statusForm.style.display = 'block';
+    };
+
+    // Close Sales Pipeline Status Modal
+    SprintTodoApp.prototype.closeSalesPipelineStatusModal = function() {
+        const modal = document.getElementById('sales-pipeline-status-modal');
+        modal.classList.remove('active');
+        
+        // Clear any edit forms
+        const editForm = modal.querySelector('.sales-pipeline-status-edit-form');
+        if (editForm) {
+            editForm.remove();
+        }
+        
+        // Reset form
+        const statusForm = document.getElementById('sales-pipeline-status-form');
+        if (statusForm) {
+            statusForm.reset();
+        }
+    };
+
+    SprintTodoApp.prototype.setupSalesPipelineDragAndDrop = function() {
+        const columns = document.querySelectorAll('.sales-pipeline-column');
+        const cards = document.querySelectorAll('.sales-opportunity-card');
+        
+        cards.forEach(card => {
+            card.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', card.dataset.opportunityId);
+                card.classList.add('dragging');
+                
+                // Create custom drag image
+                const dragImage = card.cloneNode(true);
+                dragImage.style.width = '200px';
+                dragImage.style.position = 'absolute';
+                dragImage.style.top = '-1000px';
+                document.body.appendChild(dragImage);
+                e.dataTransfer.setDragImage(dragImage, 100, 50);
+                setTimeout(() => document.body.removeChild(dragImage), 0);
+            });
+            
+            card.addEventListener('dragend', () => {
+                card.classList.remove('dragging');
+                // Remove all drop indicators
+                document.querySelectorAll('.drop-indicator').forEach(indicator => {
+                    indicator.remove();
+                });
+            });
+        });
+        
+        columns.forEach(column => {
+            column.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                column.classList.add('drag-over');
+                
+                // Show drop indicator
+                this.showSalesPipelineDropIndicator(column, e);
+            });
+            
+            column.addEventListener('dragleave', () => {
+                column.classList.remove('drag-over');
+                // Remove drop indicator
+                document.querySelectorAll('.drop-indicator').forEach(indicator => {
+                    indicator.remove();
+                });
+            });
+            
+            column.addEventListener('drop', (e) => {
+                e.preventDefault();
+                column.classList.remove('drag-over');
+                
+                // Remove drop indicator
+                document.querySelectorAll('.drop-indicator').forEach(indicator => {
+                    indicator.remove();
+                });
+                
+                const opportunityId = e.dataTransfer.getData('text/plain');
+                const newStatus = column.dataset.statusId;
+                
+                // Update opportunity status
+                const opportunity = this.getSalesOpportunities().find(opp => opp.id === opportunityId);
+                if (opportunity) {
+                    this.updateTask(opportunityId, {
+                        status: newStatus,
+                        updatedAt: new Date().toISOString()
+                    });
+                    
+                    // Re-render the pipeline
+                    this.renderSalesPipeline();
+                    this.showNotification('Opportunity status updated successfully!');
+                }
+            });
+        });
+    };
+
+    SprintTodoApp.prototype.showSalesPipelineDropIndicator = function(column, event) {
+        // Remove existing indicators
+        document.querySelectorAll('.drop-indicator').forEach(indicator => {
+            indicator.remove();
+        });
+        
+        const columnRect = column.getBoundingClientRect();
+        const columnContent = column.querySelector('.sales-column-content');
+        
+        if (!columnContent) return;
+        
+        const contentRect = columnContent.getBoundingClientRect();
+        const elements = Array.from(columnContent.querySelectorAll('.sales-opportunity-card'));
+        
+        if (elements.length === 0) {
+            // No elements, show indicator at the top
+            const indicator = document.createElement('div');
+            indicator.className = 'drop-indicator';
+            indicator.style.cssText = `
+                position: absolute;
+                top: ${contentRect.top - columnRect.top}px;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background-color: #007bff;
+                animation: pulse 1s infinite;
+                z-index: 1000;
+            `;
+            columnContent.appendChild(indicator);
+            return;
+        }
+        
+        // Find the closest element to the mouse position
+        let closestElement = null;
+        let closestDistance = Infinity;
+        
+        elements.forEach(element => {
+            const elementRect = element.getBoundingClientRect();
+            const elementCenter = elementRect.top + elementRect.height / 2;
+            const distance = Math.abs(event.clientY - elementCenter);
+            
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestElement = element;
+            }
+        });
+        
+        if (closestElement) {
+            const indicator = document.createElement('div');
+            indicator.className = 'drop-indicator';
+            
+            const elementRect = closestElement.getBoundingClientRect();
+            const insertBefore = event.clientY < elementRect.top + elementRect.height / 2;
+            
+            indicator.style.cssText = `
+                position: absolute;
+                top: ${insertBefore ? elementRect.top - columnRect.top : elementRect.bottom - columnRect.top}px;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background-color: #007bff;
+                animation: pulse 1s infinite;
+                z-index: 1000;
+            `;
+            
+            columnContent.insertBefore(indicator, insertBefore ? closestElement : closestElement.nextSibling);
+        }
+    };
+
+    SprintTodoApp.prototype.showCreateSalesContactDialog = function() {
+        const modal = document.getElementById('contact-modal');
+        const form = document.getElementById('contact-form');
+        
+        // Reset form
+        form.reset();
+        form.dataset.contactId = '';
+        
+        // Set modal title
+        document.getElementById('contact-modal-title').textContent = 'Create Contact';
+        
+        // Show modal
+        modal.classList.add('active');
+        
+        // Handle form submission
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            
+            const contactData = {
+                name: document.getElementById('contact-name').value,
+                organization: document.getElementById('contact-organization').value,
+                email: document.getElementById('contact-email').value,
+                phone: document.getElementById('contact-phone').value,
+                title: document.getElementById('contact-title').value,
+                notes: document.getElementById('contact-notes').value
+            };
+            
+            this.createSalesContact(contactData);
+            this.closeContactModal();
+        };
+    };
+
+    SprintTodoApp.prototype.closeContactModal = function() {
+        const modal = document.getElementById('contact-modal');
+        modal.classList.remove('active');
+    };
+
+    SprintTodoApp.prototype.showCreateSalesOpportunityDialog = function() {
+        const modal = document.getElementById('opportunity-modal');
+        const form = document.getElementById('opportunity-form');
+        
+        // Reset form
+        form.reset();
+        form.dataset.opportunityId = '';
+        
+        // Set modal title
+        document.getElementById('opportunity-modal-title').textContent = 'Create Opportunity';
+        
+        // Populate contacts dropdown
+        this.populateOpportunityContacts();
+        
+        // Show modal
+        modal.classList.add('active');
+        
+        // Handle form submission
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            
+            const selectedContacts = Array.from(document.getElementById('opportunity-contacts').selectedOptions)
+                .map(option => option.value);
+            
+            const opportunityData = {
+                title: document.getElementById('opportunity-name').value,
+                description: document.getElementById('opportunity-description').value,
+                value: parseFloat(document.getElementById('opportunity-value').value) || 0,
+                currency: document.getElementById('opportunity-currency').value,
+                closeDate: document.getElementById('opportunity-close-date').value,
+                probability: parseInt(document.getElementById('opportunity-probability').value) || 50,
+                assignedContacts: selectedContacts
+            };
+            
+            this.createSalesOpportunity(opportunityData);
+            this.closeOpportunityModal();
+        };
+    };
+
+    SprintTodoApp.prototype.closeOpportunityModal = function() {
+        const modal = document.getElementById('opportunity-modal');
+        modal.classList.remove('active');
+    };
+
+    SprintTodoApp.prototype.populateOpportunityContacts = function() {
+        const contactsSelect = document.getElementById('opportunity-contacts');
+        contactsSelect.innerHTML = '';
+        
+        const contacts = this.getSalesContacts();
+        contacts.forEach(contact => {
+            const option = document.createElement('option');
+            option.value = contact.id;
+            option.textContent = contact.name;
+            contactsSelect.appendChild(option);
+        });
+    };
+
+    SprintTodoApp.prototype.editSalesPipelineStatuses = function() {
+        const modal = document.getElementById('sales-pipeline-status-modal');
+        const form = document.getElementById('sales-pipeline-status-form');
+        const statusList = document.getElementById('sales-pipeline-status-list');
+        
+        // Get current statuses
+        const statuses = this.getSalesPipelineStatuses();
+        
+        // Render status list
+        statusList.innerHTML = '';
+        statuses.forEach((status, index) => {
+            const statusItem = document.createElement('div');
+            statusItem.className = 'sales-pipeline-status-item';
+            statusItem.innerHTML = `
+                <div class="sales-pipeline-status-info">
+                    <span class="sales-pipeline-status-name">${status.name}</span>
+                    <span class="sales-pipeline-status-color" style="background-color: ${status.color}"></span>
+                </div>
+                <div class="sales-pipeline-status-actions">
+                    <button class="sales-pipeline-status-edit-btn" onclick="app.editSalesPipelineStatus('${status.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="sales-pipeline-status-delete-btn" onclick="app.deleteSalesPipelineStatus('${status.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `;
+            statusList.appendChild(statusItem);
+        });
+        
+        // Show modal
+        modal.classList.add('active');
+        
+        // Handle form submission
+        form.onsubmit = (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('new-sales-pipeline-status-name').value.trim();
+            const color = document.getElementById('new-sales-pipeline-status-color').value;
+            
+            if (name) {
+                this.addSalesPipelineStatus({
+                    name: name,
+                    color: color || '#6c757d'
+                });
+                form.reset();
+            }
+        };
+    };
+
+    SprintTodoApp.prototype.exportSalesData = function() {
+        const contacts = this.getSalesContacts();
+        const opportunities = this.getSalesOpportunities();
+        
+        const data = {
+            contacts,
+            opportunities,
+            exportDate: new Date().toISOString()
+        };
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `sales-data-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        this.showNotification('Sales data exported successfully!');
+    };
+
+        // Sales Pipeline Status Modal Event Listeners
+        const salesPipelineStatusModal = document.getElementById('sales-pipeline-status-modal');
+        const salesPipelineStatusForm = document.getElementById('sales-pipeline-status-form');
+        
+        // Sales Pipeline Status Form Submission
+        if (salesPipelineStatusForm) {
+            salesPipelineStatusForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const name = document.getElementById('new-sales-pipeline-status-name').value.trim();
+                const color = document.getElementById('new-sales-pipeline-status-color').value;
+                
+                if (name) {
+                    this.addSalesPipelineStatus({ name, color });
+                    salesPipelineStatusForm.reset();
+                    document.getElementById('new-sales-pipeline-status-name').focus();
+                }
+            });
+        }
+
 // Initialize the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     window.app = new SprintTodoApp();

@@ -2074,3 +2074,691 @@ textarea {
 .folder-item {
     position: relative;
 }
+
+/* Sales Backlog Styles */
+.sales-backlog-layout {
+    display: flex;
+    height: calc(100vh - 200px);
+    gap: 20px;
+}
+
+.sales-folder-sidebar {
+    width: 250px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.sales-folder-sidebar .sidebar-header {
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.sales-folder-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sales-folder-item {
+    padding: 12px 16px;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sales-folder-item:hover {
+    background: #e9ecef;
+    transform: translateX(4px);
+}
+
+.sales-folder-item.active {
+    background: #007bff;
+    color: white;
+    border-color: #0056b3;
+}
+
+.sales-folder-item i {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+}
+
+.sales-folder-item .folder-name {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.sales-folder-item .folder-count {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: inherit;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.sales-folder-item.active .folder-count {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.sales-main-content {
+    flex: 1;
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.sales-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.sales-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.sales-table-container {
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.sales-table-header {
+    display: grid;
+    grid-template-columns: 80px 1fr 180px 180px 150px 120px 100px 80px;
+    background: #f8f9fa;
+    padding: 12px 16px;
+    font-weight: 600;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+    font-size: 14px;
+}
+
+.sales-table-body {
+    display: flex;
+    flex-direction: column;
+}
+
+.sales-item {
+    display: grid;
+    grid-template-columns: 80px 1fr 180px 180px 150px 120px 100px 80px;
+    padding: 16px;
+    border-bottom: 1px solid #dee2e6;
+    align-items: center;
+    transition: background-color 0.2s ease;
+}
+
+.sales-item:hover {
+    background: #f8f9fa;
+}
+
+.sales-item:last-child {
+    border-bottom: none;
+}
+
+.sales-col-type {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.sales-col-type.contact {
+    color: #007bff;
+}
+
+.sales-col-type.opportunity {
+    color: #28a745;
+}
+
+.sales-col-name {
+    font-weight: 500;
+    min-width: 150px;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-right: 8px;
+}
+
+.sales-col-organization {
+    color: #6c757d;
+    font-size: 14px;
+    min-width: 120px;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-left: 8px;
+}
+
+.sales-col-email {
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.sales-col-phone {
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.sales-col-value {
+    font-weight: 600;
+    color: #28a745;
+}
+
+.sales-col-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+}
+
+.sales-col-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.sales-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.sales-btn-edit {
+    background: #007bff;
+    color: white;
+}
+
+.sales-btn-edit:hover {
+    background: #0056b3;
+}
+
+.sales-btn-delete {
+    background: #dc3545;
+    color: white;
+}
+
+.sales-btn-delete:hover {
+    background: #c82333;
+}
+
+.sales-btn-assign {
+    background: #17a2b8;
+    color: white;
+}
+
+.sales-btn-assign:hover {
+    background: #138496;
+}
+
+/* Sales Pipeline Styles */
+.sales-pipeline-container {
+    display: flex;
+    gap: 20px;
+    padding: 20px 0;
+    overflow-x: auto;
+    min-height: calc(100vh - 200px);
+}
+
+.sales-pipeline-column {
+    min-width: 300px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 16px;
+    border: 2px solid #dee2e6;
+    transition: all 0.2s ease;
+}
+
+.sales-pipeline-column.drag-over {
+    background: #e3f2fd;
+    border-color: #2196f3;
+}
+
+.sales-column-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.sales-column-title {
+    font-weight: 600;
+    color: #495057;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sales-column-count {
+    background: #6c757d;
+    color: white;
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.sales-column-content {
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sales-opportunity-card {
+    background: white;
+    border-radius: 6px;
+    padding: 16px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    cursor: move;
+    transition: all 0.2s ease;
+    border-left: 4px solid #007bff;
+}
+
+.sales-opportunity-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.sales-opportunity-card.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+}
+
+.sales-opportunity-title {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #212529;
+}
+
+.sales-opportunity-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.sales-opportunity-value {
+    font-weight: 600;
+    color: #28a745;
+}
+
+.sales-opportunity-contacts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+
+.sales-contact-tag {
+    background: #e9ecef;
+    color: #495057;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+.sales-opportunity-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.sales-opportunity-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.sales-mini-btn {
+    padding: 2px 6px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    background: #6c757d;
+    color: white;
+}
+
+.sales-mini-btn:hover {
+    background: #5a6268;
+}
+
+/* Sales Pipeline Selector */
+.sales-pipeline-select {
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background: white;
+    margin-right: 10px;
+}
+
+.sales-pipeline-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Status Management for Sales Pipeline */
+.status-list.sales-status-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.status-item.sales-status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+}
+
+.status-item.sales-status-item .status-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.status-item.sales-status-item .status-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+}
+
+.status-item.sales-status-item .status-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.status-item.sales-status-item .status-name {
+    font-weight: 500;
+}
+
+.status-item.sales-status-item .status-order {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.status-item.sales-status-item .status-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Responsive Design for Sales Views */
+@media (max-width: 768px) {
+    .sales-backlog-layout {
+        flex-direction: column;
+        height: auto;
+    }
+    
+    .sales-folder-sidebar {
+        width: 100%;
+        order: 2;
+    }
+    
+    .sales-main-content {
+        order: 1;
+    }
+    
+    .sales-table-header,
+    .sales-item {
+        grid-template-columns: 60px 1fr 100px 80px 60px;
+        font-size: 12px;
+    }
+    
+    .sales-col-organization,
+    .sales-col-email,
+    .sales-col-phone,
+    .sales-col-value {
+        display: none;
+    }
+    
+    .sales-pipeline-container {
+        flex-direction: column;
+    }
+    
+    .sales-pipeline-column {
+        min-width: auto;
+    }
+}
+
+/* Sales Pipeline Status Modal Styles */
+.sales-pipeline-status-list {
+    margin-bottom: 20px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.sales-pipeline-status-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    margin-bottom: 8px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 4px solid #6c757d;
+}
+
+.sales-pipeline-status-item .status-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-right: 10px;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.sales-pipeline-status-item .status-info {
+    flex: 1;
+}
+
+.sales-pipeline-status-item .status-name {
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+
+.sales-pipeline-status-item .status-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.sales-pipeline-status-item .status-actions button {
+    padding: 4px 8px;
+    font-size: 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.sales-pipeline-status-item .edit-status-btn {
+    background: #007bff;
+    color: white;
+}
+
+.sales-pipeline-status-item .edit-status-btn:hover {
+    background: #0056b3;
+}
+
+.sales-pipeline-status-item .delete-status-btn {
+    background: #dc3545;
+    color: white;
+}
+
+.sales-pipeline-status-item .delete-status-btn:hover {
+    background: #c82333;
+}
+
+.sales-pipeline-status-form {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+}
+
+.sales-pipeline-status-form h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #495057;
+}
+
+.sales-pipeline-status-form .form-group {
+    margin-bottom: 15px;
+}
+
+.sales-pipeline-status-form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #495057;
+}
+
+.sales-pipeline-status-form input[type="text"] {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.sales-pipeline-status-form input[type="color"] {
+    width: 50px;
+    height: 35px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.sales-pipeline-status-form button[type="submit"] {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.sales-pipeline-status-form button[type="submit"]:hover {
+    background: #218838;
+}
+
+/* Sales Pipeline Status Edit Modal */
+.sales-pipeline-status-edit-form {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+}
+
+.sales-pipeline-status-edit-form .form-group {
+    margin-bottom: 15px;
+}
+
+.sales-pipeline-status-edit-form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #495057;
+}
+
+.sales-pipeline-status-edit-form input[type="text"] {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.sales-pipeline-status-edit-form input[type="color"] {
+    width: 50px;
+    height: 35px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.sales-pipeline-status-edit-form .form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.sales-pipeline-status-edit-form .form-actions button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+.sales-pipeline-status-edit-form .save-btn {
+    background: #28a745;
+    color: white;
+}
+
+.sales-pipeline-status-edit-form .save-btn:hover {
+    background: #218838;
+}
+
+.sales-pipeline-status-edit-form .cancel-btn {
+    background: #6c757d;
+    color: white;
+}
+
+.sales-pipeline-status-edit-form .cancel-btn:hover {
+    background: #545b62;
+}
+
+/* Visual feedback for newly assigned items */
+.newly-assigned {
+    animation: highlightPulse 3s ease-in-out;
+    border: 2px solid #4CAF50;
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.5);
+}
+
+@keyframes highlightPulse {
+    0% {
+        background-color: rgba(76, 175, 80, 0.1);
+        transform: scale(1);
+    }
+    50% {
+        background-color: rgba(76, 175, 80, 0.2);
+        transform: scale(1.02);
+    }
+    100% {
+        background-color: rgba(76, 175, 80, 0.1);
+        transform: scale(1);
+    }
+}
